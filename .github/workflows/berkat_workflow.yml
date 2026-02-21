@@ -1,4 +1,4 @@
-name: Hourly Berkat Parse with Telegram
+name: Hourly Berkat Parse
 
 on:
   schedule:
@@ -34,18 +34,3 @@ jobs:
         git add parsed_data/berkat_10_per_category.json
         git commit -m "Auto-update: $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
         git push
-
-    - name: Send Telegram Notification
-      if: always()
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_CHAT_ID }}
-        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        message: |
-          ${{ github.workflow }} status: ${{ job.status }}
-          
-          Repository: ${{ github.repository }}
-          Branch: ${{ github.ref_name }}
-          Time: $(date +'%Y-%m-%d %H:%M:%S')
-          
-          View results: https://github.com/${{ github.repository }}/blob/main/parsed_data/berkat_10_per_category.json
