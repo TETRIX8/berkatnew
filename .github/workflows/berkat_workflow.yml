@@ -10,6 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write # Даем права на запись в репозиторий
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -31,6 +34,7 @@ jobs:
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git add parsed_data/berkat_10_per_category.json
+        # Добавляем все JSON файлы из папки parsed_data
+        git add parsed_data/*.json
         git commit -m "Auto-update: $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
         git push
