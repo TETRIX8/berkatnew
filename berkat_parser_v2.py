@@ -13,7 +13,7 @@ CATEGORIES = [
     {"name": "Легковые автомобили", "path": "/avto/legkovye-avtomobili"},
     {"name": "Автозапчасти и принадлежности", "path": "/avto/avtozapchasti-i-prinadlezhnosti"},
     {"name": "Грузовики, автобусы, спецтехника", "path": "/avto/gruzoviki-avtobusy-spectehnika"},
-    {"name": "Автосервис и услуги", "path": "/avto/avtoservis-i-uslugi"},
+    {"name": "Автосервис и услуги", "path": "/avto/avtoservis-i-uclugi"},
     {"name": "Тюнинг", "path": "/avto/tyuning"},
     {"name": "Шины и диски", "path": "/avto/shiny-i-diski"},
     {"name": "Транспортные услуги", "path": "/avto/transportnye-uslugi"},
@@ -79,7 +79,8 @@ CATEGORIES = [
 
 class Parser:
     def __init__(self):
-        self.semaphore = asyncio.Semaphore(5)
+        # Увеличено количество одновременных запросов для ускорения
+        self.semaphore = asyncio.Semaphore(15)
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
@@ -90,26 +91,37 @@ class Parser:
                 try:
                     async with session.get(url, timeout=30) as r:
                         if r.status == 200:
-                            await asyncio.sleep(random.uniform(0.2, 0.5))
+                            # Убрана задержка для ускорения парсинга
                             return await r.text()
+                        elif r.status == 429:
+                            # Если сайт ограничивает частоту запросов, подождем немного
+                            await asyncio.sleep(2)
                 except:
                     await asyncio.sleep(1)
         return None
 
-    async def get_ads(self, session, category_obj, limit=10):
+    async def get_ads(self, session, category_obj, limit=None):
         url = BASE_URL + category_obj["path"]
         ads = []
         page = 1
         current = url
-        while current and len(ads) < limit:
+        while current:
+            # Если limit=None, парсим всё до конца
+            if limit and len(ads) >= limit:
+                break
+                
             print(f"Категория: {category_obj['name']} | Страница {page} -> {current}")
             html = await self.fetch(session, current)
             if not html:
                 break
             soup = BeautifulSoup(html, "html.parser")
             links = soup.select("h3 a[href]")
+            
+            if not links:
+                break
+
             for link in links:
-                if len(ads) >= limit:
+                if limit and len(ads) >= limit:
                     break
                 
                 href = link["href"]
@@ -126,14 +138,11 @@ class Parser:
                     "category_url": url
                 })
             
-            if len(ads) < limit:
-                next_btn = soup.select_one("a.next_page, a[rel='next']")
-                if next_btn and next_btn.get("href"):
-                    href = next_btn["href"]
-                    current = BASE_URL + href if href.startswith("/") else href
-                    page += 1
-                else:
-                    break
+            next_btn = soup.select_one("a.next_page, a[rel='next']")
+            if next_btn and next_btn.get("href"):
+                href = next_btn["href"]
+                current = BASE_URL + href if href.startswith("/") else href
+                page += 1
             else:
                 break
         return ads
@@ -224,16 +233,19 @@ async def main():
     parser = Parser()
     async with aiohttp.ClientSession(headers=parser.headers) as session:
         all_ads_brief = []
-        print("Парсинг списков объявлений (по 10 на категорию)...")
+        # limit=None означает парсинг всех доступных объявлений в категориях
+        print("Парсинг списков объявлений (БЕЗ ОГРАНИЧЕНИЙ)...")
         for cat in CATEGORIES:
-            ads = await parser.get_ads(session, cat, limit=10)
+            # Установите limit=None для полной выгрузки или число для теста
+            ads = await parser.get_ads(session, cat, limit=None)
             all_ads_brief.extend(ads)
+            print(f"Категория {cat['name']} завершена. Найдено объявлений: {len(ads)}")
         
         print(f"Всего найдено объявлений для детального парсинга: {len(all_ads_brief)}")
         
         print("Парсинг деталей объявлений...")
         results = []
-        batch_size = 20
+        batch_size = 30 # Увеличен размер батча для ускорения
         for i in range(0, len(all_ads_brief), batch_size):
             batch = all_ads_brief[i:i + batch_size]
             tasks = [parser.parse_details(session, ad) for ad in batch]
@@ -241,7 +253,7 @@ async def main():
             results.extend(res)
             print(f"Обработано {len(results)} / {len(all_ads_brief)}")
         
-        output_file = "parsed_data/berkat_10_per_category.json"
+        output_file = "parsed_data/berkat_full_data.json"
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=4, ensure_ascii=False)
         
