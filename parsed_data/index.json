@@ -1,0 +1,98 @@
+{
+  "name": "Berkat.ru parsed data",
+  "updated_at": "2026-09-09T07:03:04.825720+00:00",
+  "source": "https://berkat.ru",
+  "categories": [
+    {
+      "name": "Транспорт",
+      "slug": "transport",
+      "path": "/avto",
+      "records": 37481,
+      "file": "transport.json"
+    },
+    {
+      "name": "Недвижимость",
+      "slug": "real-estate",
+      "path": "/nedvizhimost",
+      "records": 10401,
+      "file": "real-estate.json"
+    },
+    {
+      "name": "Работа",
+      "slug": "jobs",
+      "path": "/rabota",
+      "records": 9701,
+      "file": "jobs.json"
+    },
+    {
+      "name": "Услуги",
+      "slug": "services",
+      "path": "/uslugi",
+      "records": 3196,
+      "file": "services.json"
+    },
+    {
+      "name": "Электроника",
+      "slug": "electronics",
+      "path": "/elektronika",
+      "records": 0,
+      "file": "electronics.json"
+    },
+    {
+      "name": "Бытовая техника",
+      "slug": "appliances",
+      "path": "/bytovaja-tehnika",
+      "records": 0,
+      "file": "appliances.json"
+    },
+    {
+      "name": "Дом и сад",
+      "slug": "home-and-garden",
+      "path": "/dom-i-sad",
+      "records": 0,
+      "file": "home-and-garden.json"
+    },
+    {
+      "name": "Личные вещи",
+      "slug": "personal-items",
+      "path": "/lichnye-veshhi",
+      "records": 0,
+      "file": "personal-items.json"
+    },
+    {
+      "name": "Хобби и отдых",
+      "slug": "hobbies-and-leisure",
+      "path": "/hobbi-i-otdyh",
+      "records": 0,
+      "file": "hobbies-and-leisure.json"
+    },
+    {
+      "name": "Животные",
+      "slug": "animals",
+      "path": "/zhivotnye",
+      "records": 0,
+      "file": "animals.json"
+    },
+    {
+      "name": "Для бизнеса",
+      "slug": "business",
+      "path": "/dlja-biznesa",
+      "records": 0,
+      "file": "business.json"
+    },
+    {
+      "name": "Сельхозпродукция",
+      "slug": "agriculture",
+      "path": "/selhozprodukcija",
+      "records": 0,
+      "file": "agriculture.json"
+    },
+    {
+      "name": "Разное",
+      "slug": "other",
+      "path": "/raznoe",
+      "records": 7502,
+      "file": "other.json"
+    }
+  ]
+}

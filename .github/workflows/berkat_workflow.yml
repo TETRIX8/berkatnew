@@ -2,39 +2,36 @@ name: Hourly Berkat Parse
 
 on:
   schedule:
-    # Запуск каждый час (в 00 минут каждого часа)
-    - cron: '0 * * * *'
-  workflow_dispatch: # Позволяет запускать вручную из интерфейса GitHub
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write # Даем права на запись в репозиторий
+    timeout-minutes: 60
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
 
-    - name: Run parser
-      run: python berkat_parser_v2.py
+      - name: Run parser
+        run: python berkat_parser_v2.py
 
-    - name: Commit and push changes
-      run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-        # Добавляем все JSON файлы из папки parsed_data
-        git add parsed_data/*.json
-        git commit -m "Auto-update: $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
-        git push
+      - name: Commit and push split data
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add parsed_data/*.json
+          git diff --cached --quiet || git commit -m "Auto-update parsed category data"
+          git push
