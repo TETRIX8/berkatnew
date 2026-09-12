@@ -1,20 +1,20 @@
 {
   "name": "Berkat.ru parsed data",
-  "updated_at": "2026-09-11T23:49:04.366724+00:00",
+  "updated_at": "2026-09-12T01:52:14.401411+00:00",
   "source": "https://berkat.ru",
   "categories": [
     {
       "name": "Транспорт",
       "slug": "transport",
       "path": "/avto",
-      "records": 37281,
+      "records": 37280,
       "file": "transport.json"
     },
     {
       "name": "Недвижимость",
       "slug": "real-estate",
       "path": "/nedvizhimost",
-      "records": 10397,
+      "records": 10396,
       "file": "real-estate.json"
     },
     {
