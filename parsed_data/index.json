@@ -1,6 +1,6 @@
 {
   "name": "Berkat.ru parsed data",
-  "updated_at": "2026-09-18T00:16:01.066981+00:00",
+  "updated_at": "2026-09-18T04:25:01.521886+00:00",
   "source": "https://berkat.ru",
   "categories": [
     {
@@ -14,14 +14,14 @@
       "name": "Недвижимость",
       "slug": "real-estate",
       "path": "/nedvizhimost",
-      "records": 10522,
+      "records": 10521,
       "file": "real-estate.json"
     },
     {
       "name": "Работа",
       "slug": "jobs",
       "path": "/rabota",
-      "records": 9869,
+      "records": 9870,
       "file": "jobs.json"
     },
     {
@@ -91,7 +91,7 @@
       "name": "Разное",
       "slug": "other",
       "path": "/raznoe",
-      "records": 7457,
+      "records": 7459,
       "file": "other.json"
     }
   ]
