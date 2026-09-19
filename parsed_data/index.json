@@ -1,34 +1,34 @@
 {
   "name": "Berkat.ru parsed data",
-  "updated_at": "2026-09-19T13:51:22.108489+00:00",
+  "updated_at": "2026-09-19T20:09:24.946181+00:00",
   "source": "https://berkat.ru",
   "categories": [
     {
       "name": "Транспорт",
       "slug": "transport",
       "path": "/avto",
-      "records": 37290,
+      "records": 37334,
       "file": "transport.json"
     },
     {
       "name": "Недвижимость",
       "slug": "real-estate",
       "path": "/nedvizhimost",
-      "records": 10484,
+      "records": 10504,
       "file": "real-estate.json"
     },
     {
       "name": "Работа",
       "slug": "jobs",
       "path": "/rabota",
-      "records": 9835,
+      "records": 9848,
       "file": "jobs.json"
     },
     {
       "name": "Услуги",
       "slug": "services",
       "path": "/uslugi",
-      "records": 3230,
+      "records": 3236,
       "file": "services.json"
     },
     {
@@ -91,7 +91,7 @@
       "name": "Разное",
       "slug": "other",
       "path": "/raznoe",
-      "records": 7460,
+      "records": 7471,
       "file": "other.json"
     }
   ]
