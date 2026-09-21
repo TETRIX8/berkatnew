@@ -1,166 +1,111 @@
-# Berkat.ru Parsed Data API
+# Berkat parser
 
-Репозиторий содержит автоматически собранные объявления с [Berkat.ru](https://berkat.ru), разбитые по отдельным тематическим разделам. GitHub Actions обновляет данные каждый час и сохраняет JSON-файлы в каталоге [`parsed_data/`](./parsed_data/).
+Парсер объявлений с [berkat.ru](https://berkat.ru), который сохраняет данные по категориям в компактном **постраничном JSON-формате**.
 
-> Данные предназначены для справочного и исследовательского использования. Соблюдайте правила и условия исходного сайта, учитывайте ограничения частоты запросов и не используйте данные во вред пользователям.
+## Зачем нужен постраничный формат
 
-## Быстрый доступ
+Большой единый JSON неудобен для браузера: `response.json()` сначала скачивает весь файл, а затем разбирает его в памяти. При размере десятков мегабайт сайт начинает долго загружаться или зависать.
 
-Индекс всех доступных разделов:
-
-- [Открыть index.json](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/index.json)
-- [Посмотреть JSON в репозитории](https://github.com/TETRIX8/berkatnew/tree/main/parsed_data)
-
-Каждый раздел является самостоятельным JSON-массивом объявлений. Формат raw-ссылки:
+Поэтому парсер не создаёт монолитные файлы вроде `transport.json`. Каждая категория разбивается на страницы по **250 объявлений**:
 
 ```text
-https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/{slug}.json
+parsed_data/
+├── index.json
+├── transport/
+│   ├── page-0001.json
+│   ├── page-0002.json
+│   └── ...
+├── real-estate/
+│   └── page-0001.json
+└── jobs/
+    └── page-0001.json
 ```
 
-Например, транспорт:
+Браузер загружает только необходимую страницу, а не весь каталог. JSON также записывается без пробелов и отступов, что уменьшает размер файлов. Новые данные сначала собираются во временный каталог и заменяют предыдущий набор только после успешного завершения парсинга.
 
-```text
-https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/transport.json
-```
+## Формат `index.json`
 
-## Разделы и raw-ссылки
-
-| Раздел | Файл | Raw JSON |
-|---|---|---|
-| Транспорт | `transport.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/transport.json) |
-| Недвижимость | `real-estate.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/real-estate.json) |
-| Работа | `jobs.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/jobs.json) |
-| Услуги | `services.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/services.json) |
-| Электроника | `electronics.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/electronics.json) |
-| Бытовая техника | `appliances.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/appliances.json) |
-| Дом и сад | `home-and-garden.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/home-and-garden.json) |
-| Личные вещи | `personal-items.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/personal-items.json) |
-| Хобби и отдых | `hobbies-and-leisure.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/hobbies-and-leisure.json) |
-| Животные | `animals.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/animals.json) |
-| Для бизнеса | `business.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/business.json) |
-| Сельхозпродукция | `agriculture.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/agriculture.json) |
-| Разное | `other.json` | [raw](https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/other.json) |
-
-## Структура `index.json`
-
-`index.json` содержит дату последнего обновления, источник и список разделов с количеством записей:
+Файл `parsed_data/index.json` содержит список категорий, количество объявлений и доступные страницы:
 
 ```json
 {
-  "name": "Berkat.ru parsed data",
-  "updated_at": "2026-09-09T00:00:00+00:00",
-  "source": "https://berkat.ru",
+  "version": 2,
+  "page_size": 250,
   "categories": [
     {
-      "name": "Транспорт",
       "slug": "transport",
-      "path": "/avto",
-      "records": 1234,
-      "file": "transport.json"
+      "records": 1250,
+      "page_size": 250,
+      "pages": ["page-0001.json", "page-0002.json"],
+      "directory": "transport/"
     }
   ]
 }
 ```
 
-## Формат объявления
+## Использование на сайте
 
-Каждый JSON-файл содержит массив объектов. Поля объекта:
-
-| Поле | Тип | Описание |
-|---|---|---|
-| `title` | string | Заголовок объявления |
-| `url` | string | Полная ссылка на исходное объявление |
-| `category` | string | Название раздела на русском |
-| `category_slug` | string | Стабильный slug файла |
-| `category_url` | string | Ссылка на страницу раздела |
-| `location` | string | Город или местоположение |
-| `description` | string | Описание объявления |
-| `price` | string | Цена в исходном формате |
-| `photos` | array | Ссылки на фотографии |
-| `published_at` | string | Дата публикации в исходном формате |
-| `views` | integer | Количество просмотров |
-
-Некоторые поля могут быть пустыми, если исходная страница не содержит значения или изменилась разметка сайта.
-
-## Использование как API
-
-GitHub Raw можно использовать как простой read-only JSON API без отдельного сервера.
-
-### `curl`
-
-```bash
-curl -L \
-  https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/transport.json
-```
-
-Получить индекс:
-
-```bash
-curl -L \
-  https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/index.json
-```
-
-### JavaScript
+Сначала загрузите индекс, чтобы узнать количество страниц:
 
 ```js
-const url = "https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/jobs.json";
-const ads = await fetch(url).then((response) => {
+const index = await fetch("/parsed_data/index.json").then((response) => {
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 });
-
-console.log(`Объявлений: ${ads.length}`);
-console.log(ads.slice(0, 10));
 ```
 
-### Python
+Загрузка одной страницы категории:
 
-```python
-import requests
+```js
+async function loadAds(category, page = 1) {
+  const filename = `page-${String(page).padStart(4, "0")}.json`;
+  const response = await fetch(`/parsed_data/${category}/${filename}`);
 
-url = "https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/real-estate.json"
-response = requests.get(url, timeout=30)
-response.raise_for_status()
-ads = response.json()
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
 
-for ad in ads[:10]:
-    print(ad["title"], ad["url"])
+  return response.json();
+}
+
+const ads = await loadAds("transport", 1);
+console.log(ads);
 ```
 
-### Фильтрация через `jq`
+Для перехода между страницами не объединяйте все ответы в один массив. Храните только текущую страницу в состоянии интерфейса:
 
-Первые объявления с заполненной ценой:
-
-```bash
-curl -sL \
-  https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/transport.json \
-  | jq '[.[] | select(.price != "")] | .[:10]'
+```js
+const ads = await loadAds("real-estate", currentPage);
+renderAds(ads);
 ```
 
-Объявления из конкретного города:
+Для GitHub Raw URL используется такой же путь:
 
-```bash
-curl -sL \
-  https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/real-estate.json \
-  | jq '[.[] | select(.location | test("Москва"; "i"))]'
+```text
+https://raw.githubusercontent.com/TETRIX8/berkatnew/main/parsed_data/transport/page-0001.json
 ```
 
-## Автоматическое обновление
+## Структура объявления
 
-Workflow [`.github/workflows/berkat_workflow.yml`](./.github/workflows/berkat_workflow.yml) запускается каждый час в начале часа по UTC. Также его можно запустить вручную через вкладку **Actions → Hourly Berkat Parse → Run workflow**.
+Каждый элемент страницы содержит следующие поля:
 
-Во время запуска workflow:
+| Поле | Тип | Описание |
+| --- | --- | --- |
+| `title` | string | Заголовок объявления |
+| `url` | string | Ссылка на исходное объявление |
+| `category` | string | Название категории |
+| `category_slug` | string | Слаг категории |
+| `category_url` | string | Ссылка на раздел сайта |
+| `location` | string | Местоположение |
+| `description` | string | Описание |
+| `price` | string | Цена в исходном формате |
+| `photos` | array | Ссылки на фотографии |
+| `published_at` | string | Дата публикации |
+| `views` | integer | Количество просмотров |
 
-1. устанавливает Python 3.11;
-2. устанавливает зависимости из `requirements.txt`;
-3. собирает объявления по всем разделам;
-4. сохраняет каждый раздел в отдельный файл `{slug}.json`;
-5. пересоздаёт `index.json`;
-6. коммитит изменившиеся JSON-файлы в ветку `main`.
+Некоторые поля могут быть пустыми, если исходная страница не содержит значения или разметка сайта изменилась.
 
-Старые JSON-файлы удаляются перед генерацией, поэтому устаревший монолитный `berkat_full_data.json` и старый `berkat_10_per_category.json` больше не используются.
-
-## Запуск локально
+## Локальный запуск
 
 ```bash
 git clone https://github.com/TETRIX8/berkatnew.git
@@ -171,14 +116,29 @@ pip install -r requirements.txt
 python berkat_parser_v2.py
 ```
 
-После выполнения новые файлы появятся в `parsed_data/`.
+После выполнения новые данные появятся в `parsed_data/`. Размер страницы задаётся константой `PAGE_SIZE` в `berkat_parser_v2.py`; по умолчанию это 250 объявлений.
 
-## Ограничения и рекомендации
+## Автоматическое обновление
 
-Raw-ссылки GitHub подходят для небольших и умеренных объёмов чтения. Для частого или массового использования следует добавить собственное кэширование и соблюдать лимиты GitHub. Не рассчитывайте на мгновенную актуальность: обновление происходит по расписанию, а время появления нового коммита зависит от длительности парсинга.
+Workflow [`.github/workflows/berkat_workflow.yml`](./.github/workflows/berkat_workflow.yml) запускается каждый час по UTC и может быть запущен вручную через **Actions → Hourly Berkat Parse → Run workflow**.
 
-Парсер не является официальным API Berkat.ru. Структура HTML исходного сайта может меняться, поэтому при резком падении количества записей или росте пустых полей необходимо проверить CSS-селекторы в `berkat_parser_v2.py`.
+Во время запуска workflow:
 
-## Лицензия и источник
+1. устанавливается Python 3.11;
+2. устанавливаются зависимости из `requirements.txt`;
+3. собираются объявления по категориям;
+4. каждая категория разбивается на компактные файлы `page-XXXX.json`;
+5. пересоздаётся `index.json`;
+6. обновлённый каталог данных коммитится в ветку `main`.
 
-В репозитории хранится результат автоматического сбора данных. Источник объявлений: [berkat.ru](https://berkat.ru). Перед публикацией или коммерческим использованием данных самостоятельно проверьте применимые условия, права и ограничения.
+Если парсер завершается с ошибкой, предыдущий каталог `parsed_data/` не удаляется. Это защищает сайт от публикации неполного набора данных.
+
+## Важное ограничение
+
+JSON-файлы подходят для постраничного чтения и умеренной нагрузки. Если сайту понадобится полнотекстовый поиск, сложная фильтрация или высокая параллельная нагрузка, лучше перенести данные в SQLite/PostgreSQL и отдавать их через API с параметрами `page`, `limit`, `category` и `q`.
+
+Парсер не является официальным API Berkat.ru. HTML-разметка исходного сайта может меняться, поэтому при резком падении количества записей или росте пустых полей необходимо проверить URL категорий и CSS-селекторы в `berkat_parser_v2.py`.
+
+## Источник и лицензия
+
+Источник объявлений: [berkat.ru](https://berkat.ru). Перед публикацией или коммерческим использованием данных самостоятельно проверьте применимые условия, права и ограничения.

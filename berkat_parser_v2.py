@@ -1,7 +1,8 @@
 import asyncio
 import json
-import os
 import re
+import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin
 
@@ -10,6 +11,8 @@ from bs4 import BeautifulSoup
 
 BASE_URL = "https://berkat.ru"
 OUTPUT_DIR = Path("parsed_data")
+PAGE_SIZE = 250
+DETAIL_BATCH_SIZE = 25
 
 CATEGORIES = [
     {"name": "Транспорт", "slug": "transport", "path": "/avto"},
@@ -145,49 +148,71 @@ class Parser:
 async def parse_category(parser, session, category):
     brief_ads = await parser.get_ads(session, category)
     results = []
-    for start in range(0, len(brief_ads), 25):
-        batch = brief_ads[start : start + 25]
+    for start in range(0, len(brief_ads), DETAIL_BATCH_SIZE):
+        batch = brief_ads[start : start + DETAIL_BATCH_SIZE]
         results.extend(await asyncio.gather(*(parser.parse_details(session, ad) for ad in batch)))
         print(f"[{category['name']}] Обработано: {len(results)} / {len(brief_ads)}")
         await asyncio.sleep(0.3)
     return category, results
 
 
-async def main():
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    for old_file in OUTPUT_DIR.glob("*.json"):
-        old_file.unlink()
+def write_json(path, value):
+    path.write_text(
+        json.dumps(value, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
 
+
+def write_category_pages(output_dir, category, records):
+    category_dir = output_dir / category["slug"]
+    category_dir.mkdir(parents=True, exist_ok=True)
+    pages = []
+    for start in range(0, len(records), PAGE_SIZE):
+        page_number = start // PAGE_SIZE + 1
+        filename = f"page-{page_number:04d}.json"
+        write_json(category_dir / filename, records[start : start + PAGE_SIZE])
+        pages.append(filename)
+
+    return {
+        "name": category["name"],
+        "slug": category["slug"],
+        "path": category["path"],
+        "records": len(records),
+        "page_size": PAGE_SIZE,
+        "pages": pages,
+        "directory": f"{category['slug']}/",
+    }
+
+
+async def main():
+    temp_dir = OUTPUT_DIR.with_name(f"{OUTPUT_DIR.name}.tmp")
+    if temp_dir.exists():
+        shutil.rmtree(temp_dir)
     parser = Parser()
     async with aiohttp.ClientSession(headers=parser.headers) as session:
-        parsed = await asyncio.gather(
-            *(parse_category(parser, session, category) for category in CATEGORIES)
-        )
+        category_indexes = []
+        for category in CATEGORIES:
+            category_result, records = await parse_category(parser, session, category)
+            category_index = write_category_pages(temp_dir, category_result, records)
+            category_indexes.append(category_index)
+            print(
+                f"Сохранено {category['slug']}: {len(records)} объявлений, "
+                f"страниц {len(category_index['pages'])}"
+            )
 
     index = {
         "name": "Berkat.ru parsed data",
-        "updated_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+        "version": 2,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
         "source": BASE_URL,
-        "categories": [],
+        "page_size": PAGE_SIZE,
+        "categories": category_indexes,
     }
-    for category, records in parsed:
-        output_file = OUTPUT_DIR / f"{category['slug']}.json"
-        output_file.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
-        index["categories"].append(
-            {
-                "name": category["name"],
-                "slug": category["slug"],
-                "path": category["path"],
-                "records": len(records),
-                "file": output_file.name,
-            }
-        )
-        print(f"Сохранено {output_file}: {len(records)} объявлений")
-
-    (OUTPUT_DIR / "index.json").write_text(
-        json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    print(f"Готово. Категорий: {len(parsed)}")
+    write_json(temp_dir / "index.json", index)
+    if OUTPUT_DIR.exists():
+        shutil.rmtree(OUTPUT_DIR)
+    temp_dir.rename(OUTPUT_DIR)
+    print(f"Готово. Категорий: {len(category_indexes)}")
 
 
 if __name__ == "__main__":

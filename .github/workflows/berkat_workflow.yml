@@ -32,6 +32,6 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add parsed_data/*.json
+          git add parsed_data/
           git diff --cached --quiet || git commit -m "Auto-update parsed category data"
           git push
