@@ -1,0 +1,1261 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Киберщит — закон в сети</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Rubik:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --y:#ffd60a; --y2:#ffb800; --r:#ec1f28; --rd:#5a080d; --b:#2b63ff; --bd:#06123d; --ink:#0a0a10;
+  --paper:#fff4dc; --cyan:#7fdcff; --s:1;
+  --head:'Oswald','Impact','Arial Narrow Bold',sans-serif;
+  --body:'Rubik','Segoe UI',Arial,sans-serif;
+  --mono:'JetBrains Mono',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#050510;color:#fff;font-family:var(--body);-webkit-font-smoothing:antialiased;user-select:none}
+body{cursor:pointer}
+button{font:inherit;cursor:pointer}
+
+/* ============ DECK & 3D TRANSITIONS ============ */
+#deck{position:fixed;inset:0;perspective:1800px;perspective-origin:50% 50%;overflow:hidden;z-index:1}
+.slide{position:absolute;inset:0;visibility:hidden;transform-style:preserve-3d;backface-visibility:hidden;overflow:hidden;background:#06081a}
+.slide.active,.slide.leaving{visibility:visible}
+.bg{position:absolute;inset:0;overflow:hidden}
+.stage{position:absolute;left:50%;top:50%;width:1600px;height:900px;transform:translate(-50%,-50%) scale(var(--s));perspective:1400px}
+.abs{position:absolute}
+
+/* entrance animations */
+.anim{opacity:0}
+.slide.active .anim{animation:var(--k,aUp) .95s cubic-bezier(.2,.9,.3,1.12) both;animation-delay:calc(var(--i,0) * 105ms + 420ms)}
+.slide.leaving .anim{animation:none;opacity:1}
+[data-a=pop]{--k:aPop}[data-a=left]{--k:aLeft}[data-a=right]{--k:aRight}[data-a=flip]{--k:aFlip}[data-a=zoom]{--k:aZoom}[data-a=drop]{--k:aDrop}
+@keyframes aUp{from{opacity:0;transform:translateY(70px) rotateX(-55deg)}to{opacity:1;transform:none}}
+@keyframes aPop{0%{opacity:0;transform:scale(.2) rotate(-14deg)}60%{opacity:1;transform:scale(1.12) rotate(3deg)}100%{opacity:1;transform:none}}
+@keyframes aLeft{from{opacity:0;transform:translateX(-140px) rotateY(50deg)}to{opacity:1;transform:none}}
+@keyframes aRight{from{opacity:0;transform:translateX(140px) rotateY(-50deg)}to{opacity:1;transform:none}}
+@keyframes aFlip{from{opacity:0;transform:rotateY(-100deg) translateZ(-200px)}to{opacity:1;transform:none}}
+@keyframes aZoom{from{opacity:0;transform:translateZ(-900px) scale(.6);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
+@keyframes aDrop{0%{opacity:0;transform:translateY(-260px) rotate(-10deg)}55%{opacity:1;transform:translateY(16px) rotate(2deg)}75%{transform:translateY(-8px)}100%{opacity:1;transform:none}}
+
+/* ============ BACKGROUNDS ============ */
+.bg-red{background:radial-gradient(ellipse at 30% 40%,#ff3b30 0%,#c3121b 35%,#5a080d 75%,#1c0204 100%)}
+.bg-blue{background:radial-gradient(ellipse at 70% 30%,#2d5cff 0%,#0f2a8c 40%,#06123d 75%,#02061a 100%)}
+.bg-night{background:radial-gradient(ellipse at 50% 0%,#1a2a7a 0%,#0a1240 45%,#040616 100%)}
+.halftone::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(circle,rgba(0,0,0,.45) 1.3px,transparent 1.8px);background-size:9px 9px;
+  -webkit-mask-image:radial-gradient(ellipse at 50% 50%,transparent 30%,#000 95%);mask-image:radial-gradient(ellipse at 50% 50%,transparent 30%,#000 95%)}
+.speed{position:absolute;inset:-50%;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.07) 0 1.6deg,transparent 1.6deg 7deg);animation:spin 90s linear infinite}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(90,140,255,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(90,140,255,.13) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:radial-gradient(ellipse at 60% 40%,#000 20%,transparent 80%);mask-image:radial-gradient(ellipse at 60% 40%,#000 20%,transparent 80%)}
+.scan{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 2px,transparent 2px 4px);mix-blend-mode:multiply}
+.vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.65) 100%)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 3D floor */
+.floor{position:absolute;left:-50%;right:-50%;bottom:-10%;height:75%;transform-origin:50% 0;transform:perspective(600px) rotateX(70deg);
+  background-image:linear-gradient(rgba(255,214,10,.55) 2px,transparent 2px),linear-gradient(90deg,rgba(43,99,255,.6) 2px,transparent 2px);background-size:80px 80px;animation:floorMove 2.2s linear infinite;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 40%);mask-image:linear-gradient(to bottom,transparent 0%,#000 40%)}
+@keyframes floorMove{to{background-position:0 80px,0 0}}
+.horizon{position:absolute;left:0;right:0;top:36%;height:6px;background:linear-gradient(90deg,transparent,var(--y),#fff,var(--y),transparent);filter:blur(2px);box-shadow:0 0 40px 10px rgba(255,180,0,.5)}
+
+/* ============ TYPOGRAPHY ============ */
+.ink{position:relative;display:inline-block;color:var(--y);z-index:0;font-family:var(--head);font-weight:700;line-height:1.02;letter-spacing:.005em}
+.ink::before{content:attr(data-text);position:absolute;left:0;top:0;z-index:-1;color:#000;-webkit-text-stroke:.17em #000;text-shadow:.05em .06em 0 #000,.08em .1em 0 #000,.1em .13em 0 #000}
+.ink.w{color:#fff}.ink.r{color:#ff4b4b}.ink.c{color:var(--cyan)}
+.title{font-size:72px;white-space:nowrap}
+.chap{display:inline-block;font-family:var(--head);font-weight:600;font-size:22px;letter-spacing:.18em;background:#000;color:var(--y);padding:6px 16px 7px;transform:skewX(-12deg);border:3px solid var(--y);box-shadow:5px 5px 0 var(--r);margin-bottom:8px}
+.chap span{display:inline-block;transform:skewX(12deg)}
+.lead{font-size:24px;line-height:1.4;color:#fff;font-weight:500;text-shadow:0 2px 0 #000}
+.mono{font-family:var(--mono)}
+
+/* ============ COMIC PANELS ============ */
+.panel{background:var(--paper);color:#111;border:4px solid #000;box-shadow:9px 9px 0 #000;border-radius:8px;position:relative}
+.panel.dark{background:#0d1030;color:#fff}
+.tag{display:inline-block;font-family:var(--head);font-weight:700;font-size:18px;letter-spacing:.1em;padding:3px 12px;border:3px solid #000;background:var(--y);color:#000;border-radius:4px}
+.burst-svg{position:absolute;overflow:visible}
+.sfx{font-family:var(--head);font-weight:700;transform:rotate(-12deg);display:inline-block}
+.pill{display:inline-block;background:#000;border:3px solid #fff;border-radius:40px;padding:10px 28px;font-weight:600;font-size:22px;box-shadow:0 0 0 4px #000}
+.ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;display:inline-block;vertical-align:-.12em}
+[data-tilt]{transition:transform .25s ease-out;transform-style:preserve-3d;will-change:transform}
+[data-tilt]::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(circle at var(--gx,50%) var(--gy,50%),rgba(255,255,255,.35),transparent 55%);opacity:0;transition:opacity .3s}
+[data-tilt]:hover::after{opacity:1}
+
+/* ============ SLIDE 1 HERO ============ */
+.hero-red{position:absolute;inset:0;clip-path:polygon(0 0,58% 0,54.5% 27%,57% 30%,50.5% 63%,53% 65%,44% 100%,0 100%);z-index:1}
+.hero-red .speed{left:-80%;top:-60%;right:20%;bottom:-40%}
+.seam{position:absolute;inset:0;width:100%;height:100%;z-index:2;filter:drop-shadow(0 0 10px #ffd60a) drop-shadow(0 0 30px #ff9d00)}
+.seam polyline{animation:seamFlick 2.6s infinite}
+@keyframes seamFlick{0%,100%{opacity:1}47%{opacity:1}50%{opacity:.4}53%{opacity:1}}
+.slide .stage{z-index:3}
+.hood{position:absolute}
+.hood svg{width:100%;height:100%;overflow:visible}
+.eye{animation:blink 5s infinite;transform-box:fill-box;transform-origin:center}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+.rotary{position:absolute;width:430px}
+.rotary svg{width:100%;overflow:visible}
+.handset{transform-box:view-box;transform-origin:160px 70px;animation:ring 2.4s infinite}
+@keyframes ring{0%,40%,100%{transform:none}
+ 3%{transform:translateY(-18px) rotate(-6deg)}6%{transform:translateY(-14px) rotate(6deg)}9%{transform:translateY(-20px) rotate(-5deg)}12%{transform:translateY(-12px) rotate(5deg)}15%{transform:translateY(-18px) rotate(-4deg)}18%{transform:translateY(-6px) rotate(3deg)}22%{transform:none}}
+.ringlines{animation:ringL 2.4s infinite;transform-box:view-box;transform-origin:160px 60px}
+@keyframes ringL{0%,25%,100%{opacity:0;transform:scale(.8)}5%,18%{opacity:1;transform:scale(1.1)}}
+.dzyn{position:absolute;font-size:64px;animation:dzyn 2.4s infinite}
+@keyframes dzyn{0%,30%,100%{transform:rotate(-14deg) scale(0);opacity:0}5%{transform:rotate(-14deg) scale(1.25);opacity:1}10%,22%{transform:rotate(-10deg) scale(1);opacity:1}}
+.warn{position:absolute;width:120px;animation:warnB 1.6s ease-in-out infinite}
+@keyframes warnB{0%,100%{transform:rotate(-8deg) translateY(0)}50%{transform:rotate(6deg) translateY(-12px)}}
+
+.sh-wrap{position:absolute;perspective:1000px}
+.sh-float{width:100%;height:100%;animation:floatY 5s ease-in-out infinite;transform-style:preserve-3d}
+.sh3d{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:shSpin 8s ease-in-out infinite}
+.sh3d svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+@keyframes shSpin{0%,100%{transform:rotateY(-30deg) rotateX(8deg)}50%{transform:rotateY(30deg) rotateX(-6deg)}}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-18px)}}
+.beam{transform-box:view-box;transform-origin:100px 82px;animation:beam 4.5s ease-in-out infinite}
+.panL{transform-box:view-box;transform-origin:48px 84px;animation:beamC 4.5s ease-in-out infinite}
+.panR{transform-box:view-box;transform-origin:152px 84px;animation:beamC 4.5s ease-in-out infinite}
+@keyframes beam{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
+@keyframes beamC{0%,100%{transform:rotate(7deg)}50%{transform:rotate(-7deg)}}
+.shine{animation:shine 4s ease-in-out infinite}
+@keyframes shine{0%,100%{transform:translateX(-160px)}50%{transform:translateX(160px)}}
+.burst-rot{animation:spin 40s linear infinite;transform-origin:center;transform-box:fill-box}
+.burst-pulse{animation:bpulse 2.2s ease-in-out infinite;transform-origin:center;transform-box:fill-box}
+@keyframes bpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+
+/* laptop 3D */
+.lap-wrap{position:absolute;perspective:1100px}
+.lap{position:relative;width:300px;height:190px;transform-style:preserve-3d;transform:rotateX(-16deg) rotateY(30deg);animation:lapF 7s ease-in-out infinite}
+@keyframes lapF{0%,100%{transform:rotateX(-16deg) rotateY(30deg) translateY(0)}50%{transform:rotateX(-12deg) rotateY(18deg) translateY(-10px)}}
+.lid{position:absolute;inset:0;transform-origin:50% 100%;transform:rotateX(8deg);background:linear-gradient(160deg,#2a3150,#0c0f1e);border:4px solid #000;border-radius:14px 14px 4px 4px;padding:10px;box-shadow:0 0 50px rgba(60,130,255,.55)}
+.scr{position:relative;width:100%;height:100%;border:2px solid #000;border-radius:4px;overflow:hidden;background:radial-gradient(circle at 50% 45%,#2a5bff 0%,#0b1e6e 55%,#030924 100%)}
+.scr .codes{position:absolute;left:8px;right:8px;top:0;font-family:var(--mono);font-size:9px;line-height:1.35;color:#7fdcff;opacity:.55;white-space:pre;animation:codeUp 9s linear infinite}
+@keyframes codeUp{to{transform:translateY(-50%)}}
+.scr .skull{position:absolute;left:50%;top:50%;width:46%;transform:translate(-50%,-50%);filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 22px #7fdcff);animation:skullP 2s ease-in-out infinite}
+@keyframes skullP{0%,100%{opacity:1}50%{opacity:.75}}
+.scr::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.25) 0 1px,transparent 1px 3px)}
+.base{position:absolute;left:-12px;top:100%;width:calc(100% + 24px);height:200px;transform-origin:50% 0;transform:rotateX(90deg);background:linear-gradient(#262c44,#12162a);border:4px solid #000;border-radius:4px 4px 16px 16px;padding:14px 18px}
+.kb{width:100%;height:58%;background-image:linear-gradient(90deg,#0a0c16 2px,transparent 2px),linear-gradient(#0a0c16 2px,transparent 2px);background-size:22px 20px;background-color:#3a4263;border:3px solid #000;border-radius:4px}
+.pad{width:34%;height:26%;margin:10px auto 0;border:3px solid #000;border-radius:6px;background:#2e3550}
+
+/* ============ SLIDE 2 ============ */
+.def{position:absolute;left:80px;top:250px;width:700px;padding:34px 38px}
+.def p{font-size:27px;line-height:1.45;font-weight:500}
+.def b{background:linear-gradient(transparent 55%,var(--y) 55%);font-weight:800}
+.chips{display:flex;gap:14px;margin-top:22px}
+.chip{display:flex;align-items:center;gap:10px;font-family:var(--head);font-weight:700;font-size:22px;letter-spacing:.06em;background:#000;color:#fff;border-radius:40px;padding:8px 18px}
+.chip .ic{color:var(--y);font-size:26px}
+.bubble{position:absolute;left:120px;top:640px;width:620px;padding:22px 30px;background:#fff;color:#000;border:4px solid #000;border-radius:30px;box-shadow:8px 8px 0 #000;font-size:24px;font-weight:600;line-height:1.35}
+.bubble::before{content:"";position:absolute;left:70px;top:-36px;border:18px solid transparent;border-bottom:22px solid #000}
+.bubble::after{content:"";position:absolute;left:76px;top:-22px;border:12px solid transparent;border-bottom:16px solid #fff}
+.stats{position:absolute;left:850px;top:225px;width:690px;display:flex;flex-direction:column;gap:24px;perspective:1200px}
+.stat{position:relative;display:flex;align-items:center;gap:28px;padding:24px 30px;border:4px solid #000;border-radius:10px;box-shadow:9px 9px 0 #000;min-height:178px}
+.stat.s1{background:linear-gradient(120deg,#ff3b30,#a30f17)}
+.stat.s2{background:linear-gradient(120deg,#2b63ff,#0a1f7a)}
+.stat.s3{background:linear-gradient(120deg,#ffd60a,#ff9f00);color:#000}
+.stat .num{font-size:96px;min-width:290px;text-align:center}
+.stat p{font-size:22px;line-height:1.35;font-weight:600}
+.stat small{display:block;margin-top:8px;font-size:15px;opacity:.85;font-weight:500;letter-spacing:.04em}
+.stat.s3 .num .ink{color:#fff}
+
+/* ============ SLIDE 3 villains ============ */
+.cards4{position:absolute;left:70px;top:230px;width:1460px;display:grid;grid-template-columns:repeat(4,1fr);gap:34px;perspective:1300px}
+.flip{position:relative;height:600px;cursor:pointer;transform-style:preserve-3d}
+.flip-in{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.3,1.4,.4,1)}
+.flip.on .flip-in{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:4px solid #000;border-radius:14px;box-shadow:10px 10px 0 #000;overflow:hidden;display:flex;flex-direction:column}
+.face.back{transform:rotateY(180deg);background:var(--paper);color:#111;padding:30px 26px}
+.vill-top{height:300px;position:relative;display:grid;place-items:center;border-bottom:4px solid #000;overflow:hidden}
+.vill-top::before{content:"";position:absolute;inset:-50%;background:repeating-conic-gradient(rgba(255,255,255,.14) 0 5deg,transparent 5deg 15deg);animation:spin 50s linear infinite}
+.vill-top svg{position:relative;width:190px;height:190px;filter:drop-shadow(6px 6px 0 #000);animation:floatY 3.5s ease-in-out infinite}
+.vill-body{flex:1;background:#0b0d22;padding:22px 24px;display:flex;flex-direction:column}
+.vill-body h3{font-size:36px;margin-bottom:12px}
+.vill-body p{font-size:21px;line-height:1.4;color:#e9ecff}
+.hint{margin-top:auto;font-size:16px;font-weight:600;color:var(--y);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.back h4{font-family:var(--head);font-size:30px;margin-bottom:6px}
+.back .row{margin-top:16px}
+.back .row b{display:block;font-family:var(--head);font-weight:700;font-size:19px;letter-spacing:.1em;color:#fff;background:#000;padding:3px 10px;width:max-content;margin-bottom:8px;transform:skewX(-8deg)}
+.back .row p{font-size:20px;line-height:1.4;font-weight:500}
+
+/* ============ SLIDE 4 phone ============ */
+.ph-wrap{position:absolute;left:90px;top:210px;width:300px;height:610px;perspective:1100px}
+.ph{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:phSway 7s ease-in-out infinite}
+@keyframes phSway{0%,100%{transform:rotateY(22deg) rotateX(6deg)}50%{transform:rotateY(-14deg) rotateX(-3deg)}}
+.ph-layer{position:absolute;inset:0;border-radius:46px;background:#3a0609;border:3px solid #000}
+.ph-front{position:absolute;inset:0;border-radius:46px;background:#09090e;border:5px solid #000;padding:14px;box-shadow:inset 0 0 0 3px #ff4b4b,0 0 60px rgba(255,40,40,.45)}
+.ph-shake{width:100%;height:100%;animation:phShake 2.2s infinite}
+@keyframes phShake{0%,45%,100%{transform:none}3%,9%,15%,21%,27%{transform:translateX(-5px) rotate(-1.5deg)}6%,12%,18%,24%,30%{transform:translateX(5px) rotate(1.5deg)}}
+.call{position:relative;height:100%;border-radius:34px;overflow:hidden;background:linear-gradient(180deg,#3d0a10 0%,#16040a 60%,#07070c 100%);display:flex;flex-direction:column;align-items:center;padding:38px 20px 30px;text-align:center}
+.call::before{content:"";position:absolute;top:10px;left:50%;width:90px;height:22px;margin-left:-45px;background:#000;border-radius:20px}
+.call-top{font-size:16px;letter-spacing:.12em;text-transform:uppercase;color:#ffb3b3;margin-top:14px}
+.ava{position:relative;width:118px;height:118px;margin:34px 0 22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff6b6b,#a30f17);border:4px solid #000;display:grid;place-items:center;font-family:var(--head);font-size:64px;font-weight:700}
+.ava i{position:absolute;inset:-4px;border-radius:50%;border:3px solid #ff4b4b;animation:ringOut 2.2s infinite}
+.ava i:nth-child(2){animation-delay:.5s}.ava i:nth-child(3){animation-delay:1s}
+@keyframes ringOut{from{transform:scale(1);opacity:.9}to{transform:scale(2.1);opacity:0}}
+.call-name{font-size:25px;font-weight:700;line-height:1.2}
+.call-num{margin-top:8px;font-family:var(--mono);font-size:16px;color:#ccc}
+.call-warn{margin-top:18px;background:var(--y);color:#000;font-weight:700;font-size:15px;border:3px solid #000;border-radius:8px;padding:5px 10px;animation:blinkW 1s steps(2) infinite}
+@keyframes blinkW{50%{background:#fff}}
+.call-btns{margin-top:auto;display:flex;gap:70px}
+.call-btns b{width:70px;height:70px;border-radius:50%;display:grid;place-items:center;border:4px solid #000;font-size:32px}
+.call-btns .dec{background:#ff3b30}.call-btns .acc{background:#22c55e;animation:accB 1s ease-in-out infinite}
+@keyframes accB{50%{transform:translateY(-6px)}}
+.bubs{position:absolute;left:450px;top:205px;width:640px;display:flex;flex-direction:column;gap:22px}
+.bub{position:relative;background:#fff;color:#000;border:4px solid #000;border-radius:22px;box-shadow:7px 7px 0 #000;padding:16px 22px 14px}
+.bub::before{content:"";position:absolute;left:-26px;top:26px;border:13px solid transparent;border-right:18px solid #000}
+.bub .q{font-size:21px;font-weight:700;line-height:1.3;font-style:italic}
+.flag{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:17px;font-weight:600;color:#fff;background:var(--r);border:3px solid #000;border-radius:8px;padding:5px 12px;width:max-content;max-width:100%}
+.flag .ic{font-size:20px;color:var(--y);flex:none}
+.scen{position:absolute;left:1130px;top:205px;width:420px;padding:24px 26px}
+.scen h3{font-family:var(--head);font-size:30px;margin-bottom:12px}
+.scen ol{list-style:none;counter-reset:s}
+.scen li{counter-increment:s;display:flex;gap:12px;align-items:flex-start;font-size:19px;font-weight:600;line-height:1.3;padding:9px 0;border-bottom:2px dashed #0003}
+.scen li:last-child{border:0}
+.scen li::before{content:counter(s);flex:none;width:32px;height:32px;border-radius:50%;background:var(--r);color:#fff;border:3px solid #000;display:grid;place-items:center;font-family:var(--head);font-size:17px}
+.rule1{position:absolute;left:1130px;top:690px;width:420px;padding:18px 22px;background:var(--y);color:#000;border:4px solid #000;border-radius:10px;box-shadow:8px 8px 0 #000;transform:rotate(-2deg)}
+.rule1 b{font-family:var(--head);font-size:30px;display:block;line-height:1.05}
+.rule1 span{font-size:18px;font-weight:600}
+
+/* ============ SLIDE 5 hackers ============ */
+canvas.full{position:absolute;inset:0;width:100%;height:100%}
+.lap-big{left:80px;top:260px;width:560px;height:520px}
+.lap-big .lap{width:500px;height:320px;margin:40px 0 0 30px}
+.lap-big .base{height:330px}
+.term{position:absolute;inset:0;padding:14px 16px;font-family:var(--mono);font-size:15px;line-height:1.5;color:#7fffb0;white-space:pre-wrap;text-shadow:0 0 8px #3dff9a;z-index:2}
+.term .er{color:#ff6b6b;text-shadow:0 0 8px #ff3b30}
+.term .ok{color:var(--y);text-shadow:0 0 8px #ffb800}
+.cursor{display:inline-block;width:9px;height:17px;background:#7fffb0;vertical-align:-3px;animation:blinkW2 .8s steps(2) infinite}
+@keyframes blinkW2{50%{opacity:0}}
+.glitch{position:relative}
+.glitch-a{animation:glitch 3.5s infinite}
+@keyframes glitch{0%,90%,100%{transform:none;filter:none}91%{transform:translate(-4px,2px) skewX(-8deg);filter:drop-shadow(4px 0 0 #ff2a6d) drop-shadow(-4px 0 0 #00f0ff)}93%{transform:translate(5px,-2px);filter:drop-shadow(-5px 0 0 #ff2a6d) drop-shadow(5px 0 0 #00f0ff)}95%{transform:translate(-2px,0) skewX(6deg)}}
+.methods{position:absolute;left:700px;top:195px;width:850px;display:flex;flex-direction:column;gap:12px;perspective:1200px}
+.meth{position:relative;display:flex;align-items:center;gap:22px;padding:10px 22px;background:rgba(6,14,50,.82);border:3px solid #000;outline:2px solid rgba(127,220,255,.55);outline-offset:-7px;border-radius:12px;box-shadow:8px 8px 0 #000}
+.methods>div:nth-child(even) .meth{margin-left:50px}
+.meth .mi{flex:none;width:66px;height:66px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#2b63ff,#0a1f7a);border:3px solid #000;font-size:42px;color:#fff;box-shadow:0 0 22px rgba(43,99,255,.7)}
+.meth h3{font-family:var(--head);font-size:26px;color:var(--cyan);letter-spacing:.04em}
+.meth p{font-size:17.5px;line-height:1.35;color:#dfe6ff}
+.quote-h{position:absolute;left:80px;top:790px;width:600px;font-size:21px;font-weight:600;line-height:1.35;padding:14px 20px;border-left:8px solid var(--y);background:rgba(0,0,0,.55)}
+
+/* ============ SLIDE 6 law ============ */
+.law-grid{position:absolute;left:70px;top:215px;width:1460px;display:grid;grid-template-columns:repeat(4,1fr);gap:26px 28px;perspective:1300px}
+.law{height:265px}
+.law .face{box-shadow:8px 8px 0 #000}
+.law .front{background:linear-gradient(150deg,#13246e,#060b2b);padding:22px 22px;justify-content:space-between}
+.law-grid>div:nth-child(4n+2) .front,.law-grid>div:nth-child(4n+4) .front{background:linear-gradient(150deg,#8f0f16,#2a0306)}
+.law .art{font-family:var(--head);font-weight:700;font-size:20px;letter-spacing:.14em;color:#fff;opacity:.85}
+.law .num{font-size:64px}
+.law .nm{font-size:20px;font-weight:700;line-height:1.25}
+.law .front .hint{margin-top:0;font-size:13px}
+.law .back{padding:22px 22px;justify-content:space-between}
+.law .back p{font-size:19.5px;line-height:1.38;font-weight:600}
+.law .term-y{display:flex;align-items:center;gap:12px;font-family:var(--head);font-weight:700;font-size:30px;color:#000}
+.law .term-y span{background:var(--r);color:#fff;border:3px solid #000;border-radius:6px;padding:2px 12px;font-size:30px}
+.law .back small{font-size:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#7a1016}
+.law-strip{position:absolute;left:70px;top:806px;width:1460px;display:flex;gap:14px;align-items:center;background:#000;border:3px solid var(--y);border-radius:12px;padding:12px 20px;font-size:17px;font-weight:500;line-height:1.35}
+.law-strip b{color:var(--y)}
+.law-strip .ic{font-size:34px;color:var(--y);flex:none}
+
+/* ============ SLIDE 7 pipeline ============ */
+.pipe{position:absolute;left:0;top:0;width:1600px;height:900px;overflow:visible}
+.pipe .track{fill:none;stroke:#000;stroke-width:22;stroke-linecap:round}
+.pipe .track2{fill:none;stroke:#2b63ff;stroke-width:12;stroke-linecap:round}
+.pipe .dash{fill:none;stroke:var(--y);stroke-width:4;stroke-dasharray:14 16;animation:dashM 1s linear infinite}
+@keyframes dashM{to{stroke-dashoffset:-30}}
+.node circle.n{fill:#0d1030;stroke:#000;stroke-width:6;transition:fill .4s}
+.node circle.ring{fill:none;stroke:var(--y);stroke-width:4;opacity:0}
+.node.lit circle.n{fill:var(--r)}
+.node.lit circle.ring{animation:nodeRing 1.4s ease-out}
+@keyframes nodeRing{from{opacity:1;r:58}to{opacity:0;r:110}}
+.node .nico{color:#fff}
+.node text{font-family:var(--head);font-weight:700}
+.stepc{position:absolute;width:390px;padding:14px 18px;text-align:center}
+.stepc h3{font-family:var(--head);font-size:27px;letter-spacing:.05em;margin-bottom:4px}
+.stepc p{font-size:17.5px;line-height:1.35;font-weight:500}
+.side-note{position:absolute;left:1210px;top:52px;width:340px;padding:12px 16px;background:var(--y);color:#000;border:4px solid #000;border-radius:10px;box-shadow:7px 7px 0 #000;font-size:16.5px;font-weight:600;line-height:1.3;transform:rotate(2deg)}
+
+/* ============ SLIDE 8 globe ============ */
+.globe-box{position:absolute;left:30px;top:150px;width:700px;height:700px}
+.globe-box canvas{width:100%;height:100%}
+.clues{position:absolute;left:760px;top:195px;width:790px;display:flex;flex-direction:column;gap:11px;perspective:1200px}
+.clue{display:flex;gap:18px;align-items:center;padding:10px 20px;border-radius:12px}
+.clue .ci{flex:none;width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-size:32px;background:var(--y);color:#000;border:3px solid #000}
+.clue h3{font-family:var(--head);font-size:25px;letter-spacing:.03em}
+.clue p{font-size:16.5px;line-height:1.35;font-weight:500}
+.bigq{position:absolute;left:760px;top:782px;width:790px;font-family:var(--head);font-weight:700;font-size:29px;line-height:1.15;color:#fff;background:var(--r);border:4px solid #000;box-shadow:8px 8px 0 #000;padding:12px 22px;border-radius:10px;transform:rotate(-1deg)}
+
+/* ============ SLIDE 9 checklist ============ */
+.lock-wrap{position:absolute;left:110px;top:220px;width:380px;height:470px;perspective:1000px}
+.lock3d{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:shSpin 7s ease-in-out infinite}
+.lock3d svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.shackle{transition:transform .8s cubic-bezier(.5,1.8,.5,1)}
+.lock-open .shackle{transform:translateY(-46px)}
+.lbody{transition:fill .6s}
+.lock-status{position:absolute;left:90px;top:715px;width:440px;text-align:center}
+.lock-status .st{font-family:var(--head);font-weight:700;font-size:34px;letter-spacing:.06em}
+.bar{margin-top:12px;height:28px;border:4px solid #000;border-radius:20px;background:#1b1b30;overflow:hidden;box-shadow:5px 5px 0 #000}
+.bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(-45deg,var(--y) 0 14px,var(--y2) 14px 28px);transition:width .6s cubic-bezier(.3,1.5,.5,1);border-right:3px solid #000}
+.chk{position:absolute;left:600px;top:200px;width:950px;list-style:none;display:flex;flex-direction:column;gap:12px;perspective:1200px}
+.chk li{position:relative;display:flex;align-items:center;gap:18px;padding:12px 20px 12px 16px;background:var(--paper);color:#111;border:4px solid #000;border-radius:12px;box-shadow:7px 7px 0 #000;cursor:pointer;transition:background .3s,transform .2s}
+.chk li:hover{transform:translateX(8px)}
+.chk .box{flex:none;width:46px;height:46px;border:4px solid #000;border-radius:10px;background:#fff;display:grid;place-items:center;font-size:30px;color:#000}
+.chk .box .ic{opacity:0;transform:scale(0) rotate(-30deg);transition:.35s cubic-bezier(.3,1.8,.5,1);stroke-width:3.5}
+.chk li.done{background:#d8ffd0}
+.chk li.done .box{background:var(--y)}
+.chk li.done .box .ic{opacity:1;transform:none}
+.chk .t{font-size:20px;line-height:1.32;font-weight:500}
+.chk .t b{font-weight:800}
+.chk .stamp{position:absolute;right:18px;top:50%;font-family:var(--head);font-weight:700;font-size:20px;letter-spacing:.1em;color:#16a34a;border:3px solid #16a34a;border-radius:6px;padding:1px 10px;transform:translateY(-50%) rotate(-10deg) scale(2.2);opacity:0;transition:.35s cubic-bezier(.3,1.6,.5,1)}
+.chk li.done .stamp{opacity:1;transform:translateY(-50%) rotate(-10deg) scale(1)}
+
+/* ============ SLIDE 10 money/data ============ */
+.two{position:absolute;left:70px;top:210px;width:1460px;display:grid;grid-template-columns:1fr 1fr;gap:60px;perspective:1300px}
+.col{padding:26px 30px 24px;border:4px solid #000;border-radius:14px;box-shadow:10px 10px 0 #000;position:relative}
+.col.red{background:linear-gradient(160deg,#c3121b,#4a060a)}
+.col.blue{background:linear-gradient(160deg,#1f4fe0,#06123d)}
+.col h3{display:flex;align-items:center;gap:16px;font-size:40px;margin-bottom:14px}
+.col h3 .hi{width:70px;height:70px;border-radius:50%;background:var(--y);border:4px solid #000;display:grid;place-items:center;font-size:38px;color:#000;flex:none}
+.col ol{list-style:none;counter-reset:c}
+.col li{counter-increment:c;display:flex;gap:14px;align-items:flex-start;font-size:19.5px;line-height:1.35;font-weight:500;padding:9px 0;border-bottom:2px dashed rgba(255,255,255,.25)}
+.col li:last-child{border:0}
+.col li::before{content:counter(c);flex:none;width:34px;height:34px;border-radius:8px;background:#fff;color:#000;border:3px solid #000;display:grid;place-items:center;font-family:var(--head);font-weight:700;font-size:19px;transform:rotate(-6deg)}
+.col li b{color:var(--y)}
+.timer{position:absolute;right:-26px;top:-34px;width:118px;height:118px;border-radius:50%;background:var(--y);border:5px solid #000;box-shadow:6px 6px 0 #000;display:grid;place-items:center;text-align:center;font-family:var(--head);font-weight:700;color:#000;font-size:17px;line-height:1;transform:rotate(10deg)}
+.timer svg{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12px)}
+.timer .hand{transform-origin:50% 50%;animation:spin 3s linear infinite;transform-box:view-box}
+.note-y{margin-top:14px;background:var(--y);color:#000;border:3px solid #000;border-radius:10px;padding:10px 14px;font-size:17px;font-weight:600;line-height:1.35}
+.vs{position:absolute;left:50%;top:50%;width:110px;height:110px;margin:-55px 0 0 -55px;z-index:3}
+
+/* ============ SLIDE 11 rules ============ */
+.rules{position:absolute;left:70px;top:215px;width:1460px;display:grid;grid-template-columns:repeat(4,1fr);gap:28px;perspective:1300px}
+.rule{position:relative;height:300px;padding:24px 22px 20px;border:4px solid #000;border-radius:16px;box-shadow:9px 9px 0 #000;display:flex;flex-direction:column;overflow:hidden}
+.rules>div:nth-child(4n+1) .rule{background:linear-gradient(150deg,#ff3b30,#8f0f16)}
+.rules>div:nth-child(4n+2) .rule{background:linear-gradient(150deg,#2b63ff,#0a1f7a)}
+.rules>div:nth-child(4n+3) .rule{background:linear-gradient(150deg,#ffd60a,#ff9f00);color:#000}
+.rules>div:nth-child(4n+4) .rule{background:linear-gradient(150deg,#1d1f3a,#07081a)}
+.rule .n{position:absolute;right:14px;top:-6px;font-family:var(--head);font-weight:700;font-size:110px;line-height:1;opacity:.18}
+.rule .ri{width:76px;height:76px;border-radius:18px;background:#fff;border:4px solid #000;display:grid;place-items:center;font-size:42px;color:#000;box-shadow:5px 5px 0 #000;transform:rotate(-6deg)}
+.rule h3{font-family:var(--head);font-weight:700;font-size:30px;line-height:1.08;margin:18px 0 8px}
+.rule p{font-size:17.5px;line-height:1.35;font-weight:500}
+
+/* ============ SLIDE 12 quiz ============ */
+.quiz{position:absolute;left:70px;top:205px;width:1460px;display:grid;grid-template-columns:1fr 1fr;gap:28px 36px;perspective:1300px}
+.qcard{position:relative;min-height:290px;padding:22px 26px;background:var(--paper);color:#111;border:4px solid #000;border-radius:16px;box-shadow:9px 9px 0 #000;display:flex;flex-direction:column;cursor:default;overflow:hidden}
+.qcard .qh{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.qcard .qh .tag{font-size:16px}
+.qcard .sit{font-size:21px;line-height:1.38;font-weight:600}
+.qbtns{display:flex;gap:14px;margin-top:auto;padding-top:14px}
+.qbtns button{flex:1;font-family:var(--head);font-weight:700;font-size:22px;letter-spacing:.06em;padding:11px 10px;border:4px solid #000;border-radius:12px;box-shadow:5px 5px 0 #000;transition:transform .15s,box-shadow .15s}
+.qbtns button:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 #000}
+.qbtns button:active{transform:translate(4px,4px);box-shadow:1px 1px 0 #000}
+.qbtns .bs{background:var(--r);color:#fff}.qbtns .bo{background:#22c55e;color:#000}
+.qres{position:absolute;inset:0;padding:22px 26px;display:flex;flex-direction:column;justify-content:center;gap:10px;transform:translateY(105%);transition:transform .6s cubic-bezier(.3,1.3,.5,1);border-radius:12px}
+.qcard.answered .qres{transform:none}
+.qres.good{background:linear-gradient(150deg,#22c55e,#0d6e33);color:#fff}
+.qres.bad{background:linear-gradient(150deg,#ff3b30,#7a0a10);color:#fff}
+.qres .big{font-family:var(--head);font-weight:700;font-size:44px;line-height:1}
+.qres p{font-size:20px;line-height:1.38;font-weight:500}
+.qres button{align-self:flex-start;background:#000;color:#fff;border:3px solid #fff;border-radius:30px;padding:6px 16px;font-size:15px;font-weight:600}
+.score{position:absolute;left:1220px;top:70px;width:310px;text-align:center;background:#000;border:4px solid var(--y);border-radius:16px;padding:10px 14px;box-shadow:7px 7px 0 var(--r)}
+.score .sv{font-family:var(--head);font-weight:700;font-size:54px;color:var(--y);line-height:1}
+.score small{font-size:15px;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+
+/* ============ SLIDE 13 final ============ */
+.contacts{position:absolute;left:760px;top:360px;width:790px;display:grid;grid-template-columns:1fr 1fr;gap:20px;perspective:1200px}
+.ct{position:relative;padding:18px 20px;border:4px solid #000;border-radius:14px;box-shadow:8px 8px 0 #000;background:var(--paper);color:#111;min-height:150px}
+.ct .cn{font-family:var(--head);font-weight:700;font-size:50px;line-height:1;color:var(--r)}
+.contacts>div:nth-child(2) .cn{color:var(--b)}
+.ct .cn.sm{font-size:31px;line-height:1.15}
+.ct p{font-size:17.5px;line-height:1.35;font-weight:600;margin-top:6px}
+.final-line{position:absolute;left:760px;top:740px;width:790px;font-size:23px;font-weight:600;line-height:1.35;padding:12px 20px;background:rgba(0,0,0,.6);border-left:8px solid var(--y);border-radius:0 10px 10px 0}
+.restart{position:absolute;left:190px;top:790px;font-family:var(--head);font-weight:700;font-size:24px;letter-spacing:.08em;background:var(--y);color:#000;border:4px solid #000;border-radius:40px;padding:12px 30px;box-shadow:6px 6px 0 #000;transition:transform .15s}
+.restart:hover{transform:translate(-2px,-2px) rotate(-2deg)}
+
+/* ============ UI ============ */
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:30;pointer-events:none;mix-blend-mode:screen}
+#slash{position:fixed;inset:0;z-index:40;pointer-events:none;overflow:hidden}
+#slash i{position:absolute;top:-30%;height:160%;left:0;transform:translateX(-200%) skewX(-18deg);border-left:6px solid #000;border-right:6px solid #000}
+#slash i:nth-child(1){width:10vw;background:var(--y)}
+#slash i:nth-child(2){width:4vw;background:#000}
+#slash i:nth-child(3){width:7vw;background:var(--r)}
+#slash i:nth-child(4){width:3vw;background:var(--b)}
+.ui{position:fixed;z-index:50}
+.topbar{top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:14px 22px;pointer-events:none}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--head);font-weight:700;font-size:20px;letter-spacing:.14em;background:rgba(0,0,0,.6);padding:6px 14px 6px 8px;border-radius:30px;border:2px solid rgba(255,214,10,.6);backdrop-filter:blur(6px)}
+.logo svg{width:26px;height:30px}
+.logo em{font-style:normal;color:var(--y)}
+.tr{display:flex;gap:10px;align-items:center;pointer-events:auto}
+.counter{font-family:var(--head);font-weight:700;font-size:22px;letter-spacing:.08em;background:var(--y);color:#000;border:3px solid #000;border-radius:8px;padding:2px 12px;box-shadow:4px 4px 0 #000;transform:skewX(-8deg)}
+.counter span{display:inline-block;transform:skewX(8deg)}
+.ibtn{width:44px;height:44px;border-radius:12px;border:3px solid #000;background:#fff;color:#000;display:grid;place-items:center;font-size:22px;box-shadow:4px 4px 0 #000;transition:transform .15s}
+.ibtn:hover{transform:translate(-2px,-2px)}
+.nav-arrow{top:50%;width:62px;height:62px;margin-top:-31px;border-radius:50%;border:4px solid #000;background:var(--y);color:#000;display:grid;place-items:center;font-size:30px;box-shadow:5px 5px 0 #000;transition:transform .2s,opacity .3s;opacity:.85}
+.nav-arrow:hover{transform:scale(1.12);opacity:1}
+.nav-arrow.prev{left:18px}.nav-arrow.next{right:18px}
+.nav-arrow[disabled]{opacity:0;pointer-events:none}
+.bottombar{left:0;right:0;bottom:0;padding:0 22px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none}
+.dots{display:flex;gap:8px;pointer-events:auto}
+.dots button{width:14px;height:14px;border-radius:50%;border:2px solid #000;background:rgba(255,255,255,.55);transition:all .3s;padding:0}
+.dots button.on{width:38px;border-radius:10px;background:var(--y)}
+.progress{position:fixed;left:0;bottom:0;height:6px;background:linear-gradient(90deg,var(--r),var(--y),var(--b));z-index:51;transition:width .9s cubic-bezier(.7,0,.25,1);box-shadow:0 0 14px var(--y)}
+.hint-click{position:fixed;left:50%;bottom:38px;white-space:nowrap;font-size:13px!important;transform:translateX(-50%);z-index:50;font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.65);border:2px solid rgba(255,255,255,.3);padding:7px 18px;border-radius:30px;pointer-events:none;animation:hintB 2s ease-in-out infinite;transition:opacity .5s}
+@keyframes hintB{50%{transform:translateX(-50%) translateY(-6px)}}
+.rotate-hint{display:none}
+@media (orientation:portrait) and (max-width:700px){
+  .rotate-hint{display:flex;position:fixed;left:12px;right:12px;top:60px;z-index:60;background:var(--y);color:#000;border:3px solid #000;border-radius:12px;padding:10px 14px;font-weight:700;font-size:15px;justify-content:center;text-align:center;pointer-events:none}
+  .nav-arrow{width:44px;height:44px;margin-top:-22px;font-size:22px}
+  .hint-click{display:none}
+}
+/* ============ PDF MODE (?pdf) ============ */
+@page{size:1600px 900px;margin:0}
+html.pdf,html.pdf body{overflow:visible;height:auto;width:1600px;background:#06081a}
+html.pdf *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+html.pdf #deck{position:static;perspective:none;overflow:visible}
+html.pdf .slide{position:relative;visibility:visible;width:1600px;height:900px;break-after:page;page-break-after:always;transform:none!important;opacity:1!important}
+html.pdf .stage{left:0;top:0;transform:none}
+html.pdf .anim{opacity:1!important;animation:none!important}
+html.pdf .dzyn{animation:none;transform:rotate(-12deg)}
+html.pdf .ringlines{animation:none;opacity:1}
+html.pdf .ui,html.pdf #fx,html.pdf #slash,html.pdf .progress,html.pdf .hint-click,html.pdf .rotate-hint{display:none!important}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<!-- Global SVG defs -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gRim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff7b0"/><stop offset=".35" stop-color="#ffd60a"/><stop offset=".75" stop-color="#e0a100"/><stop offset="1" stop-color="#8a5a00"/></linearGradient>
+    <linearGradient id="gBL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a8cff"/><stop offset="1" stop-color="#1f45d0"/></linearGradient>
+    <linearGradient id="gBR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2148c8"/><stop offset="1" stop-color="#0a1c66"/></linearGradient>
+    <linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffbe0"/><stop offset=".4" stop-color="#ffd60a"/><stop offset="1" stop-color="#c08000"/></linearGradient>
+    <linearGradient id="gShine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <radialGradient id="gEyeR"><stop offset="0" stop-color="#fff6a0"/><stop offset=".4" stop-color="#ff3b30"/><stop offset="1" stop-color="#ff3b30" stop-opacity="0"/></radialGradient>
+    <radialGradient id="gEyeB"><stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#7fdcff"/><stop offset="1" stop-color="#7fdcff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="gFaceGlow" cx=".3" cy=".8" r=".9"><stop offset="0" stop-color="#3d7bff" stop-opacity=".55"/><stop offset="1" stop-color="#3d7bff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="gHoodR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a0b12"/><stop offset="1" stop-color="#1a0204"/></linearGradient>
+    <linearGradient id="gHoodB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14204f"/><stop offset="1" stop-color="#02040e"/></linearGradient>
+    <pattern id="dots" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="1.3" fill="#000"/></pattern>
+    <pattern id="dotsW" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="1.2" fill="#fff"/></pattern>
+    <clipPath id="cpSh"><path d="M100 8 C128 24 160 28 190 26 L190 112 C190 172 150 212 100 234 C50 212 10 172 10 112 L10 26 C40 28 72 24 100 8 Z" transform="translate(100 121) scale(.94) translate(-100 -121)"/></clipPath>
+    <clipPath id="cpBody"><path d="M48 212 L70 118 Q80 92 160 92 Q240 92 250 118 L272 212 Q274 226 258 226 L62 226 Q46 226 48 212Z"/></clipPath>
+  </defs>
+</svg>
+
+<div id="deck">
+
+<!-- ================= 1. HERO ================= -->
+<section class="slide hero" data-title="Обложка">
+  <div class="bg bg-blue"><div class="grid-bg"></div></div>
+  <div class="bg"><canvas class="full" data-rain="hero"></canvas></div>
+  <div class="hero-red bg-red halftone"><div class="speed"></div></div>
+  <svg class="seam" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="58,0 54.5,27 57,30 50.5,63 53,65 44,100" fill="none" stroke="#000" stroke-width="12" vector-effect="non-scaling-stroke"/><polyline points="58,0 54.5,27 57,30 50.5,63 53,65 44,100" fill="none" stroke="#ffd60a" stroke-width="6" vector-effect="non-scaling-stroke"/></svg>
+  <div class="bg vignette" style="z-index:2"></div>
+  <div class="stage">
+    <!-- shadowy figures (red side) -->
+    <div class="hood" data-depth="0.6" style="left:160px;top:40px;width:200px;height:260px;opacity:.75;filter:blur(1px)"><svg viewBox="0 0 200 260"><path d="M100 8 C58 8 34 50 36 98 C37 122 28 140 18 160 C6 186 0 224 0 260 L200 260 C200 224 194 186 182 160 C172 140 163 122 164 98 C166 50 142 8 100 8 Z" fill="url(#gHoodR)" stroke="#000" stroke-width="4"/><ellipse cx="100" cy="108" rx="31" ry="42" fill="#0a0102"/><ellipse class="eye" cx="88" cy="104" rx="7" ry="4" fill="url(#gEyeR)"/><ellipse class="eye" cx="112" cy="104" rx="7" ry="4" fill="url(#gEyeR)"/></svg></div>
+    <div class="hood" data-depth="0.35" style="left:330px;top:120px;width:150px;height:200px;opacity:.55;filter:blur(2px)"><svg viewBox="0 0 200 260"><path d="M100 8 C58 8 34 50 36 98 C37 122 28 140 18 160 C6 186 0 224 0 260 L200 260 C200 224 194 186 182 160 C172 140 163 122 164 98 C166 50 142 8 100 8 Z" fill="url(#gHoodR)"/><ellipse cx="100" cy="108" rx="31" ry="42" fill="#0a0102"/><ellipse class="eye" cx="88" cy="104" rx="7" ry="4" fill="url(#gEyeR)"/><ellipse class="eye" cx="112" cy="104" rx="7" ry="4" fill="url(#gEyeR)"/></svg></div>
+    <div class="hood" data-depth="0.25" style="left:30px;top:150px;width:130px;height:170px;opacity:.45;filter:blur(2.5px)"><svg viewBox="0 0 200 260"><path d="M100 8 C58 8 34 50 36 98 C37 122 28 140 18 160 C6 186 0 224 0 260 L200 260 C200 224 194 186 182 160 C172 140 163 122 164 98 C166 50 142 8 100 8 Z" fill="url(#gHoodR)"/><ellipse cx="100" cy="108" rx="31" ry="42" fill="#0a0102"/><ellipse class="eye" cx="88" cy="104" rx="7" ry="4" fill="url(#gEyeR)"/><ellipse class="eye" cx="112" cy="104" rx="7" ry="4" fill="url(#gEyeR)"/></svg></div>
+
+    <!-- warning -->
+    <div data-depth="1.2" class="abs" style="left:40px;top:380px"><div class="warn anim" data-a="pop"><svg viewBox="0 0 120 108"><path d="M60 6 L114 100 Q116 104 110 104 L10 104 Q4 104 6 100 Z" fill="#ffd60a" stroke="#000" stroke-width="7" stroke-linejoin="round"/><rect x="53" y="36" width="14" height="40" rx="6" fill="#000"/><circle cx="60" cy="88" r="7.5" fill="#000"/></svg></div></div>
+
+    <!-- rotary phone -->
+    <div data-depth="1" class="abs" style="left:60px;top:470px">
+      <div class="rotary anim" data-a="drop">
+        <svg viewBox="0 0 320 260">
+          <ellipse cx="160" cy="236" rx="150" ry="16" fill="#000" opacity=".55"/>
+          <path d="M268 190 c26 -2 18 22 34 20 c16 -2 6 26 22 24 c16 -2 6 26 22 24" fill="none" stroke="#000" stroke-width="9" stroke-linecap="round"/>
+          <path d="M268 190 c26 -2 18 22 34 20 c16 -2 6 26 22 24 c16 -2 6 26 22 24" fill="none" stroke="#3a3a44" stroke-width="4" stroke-linecap="round"/>
+          <path d="M48 212 L70 118 Q80 92 160 92 Q240 92 250 118 L272 212 Q274 226 258 226 L62 226 Q46 226 48 212Z" fill="#1c1c24" stroke="#000" stroke-width="6"/>
+          <g clip-path="url(#cpBody)"><rect x="170" y="90" width="120" height="140" fill="url(#dots)" opacity=".7"/><path d="M60 214 L78 122 Q88 104 150 102" fill="none" stroke="#ff4b4b" stroke-width="5" stroke-linecap="round"/></g>
+          <circle cx="160" cy="165" r="52" fill="#2a2a34" stroke="#000" stroke-width="6"/>
+          <circle cx="160" cy="165" r="45" fill="none" stroke="#ff4b4b" stroke-width="2" opacity=".6"/>
+          <g fill="#0b0b10" stroke="#000" stroke-width="2.5">
+            <circle cx="176.5" cy="136.4" r="7.5"/><circle cx="188.6" cy="148.5" r="7.5"/><circle cx="193" cy="165" r="7.5"/><circle cx="188.6" cy="181.5" r="7.5"/><circle cx="176.5" cy="193.6" r="7.5"/><circle cx="160" cy="198" r="7.5"/><circle cx="143.5" cy="193.6" r="7.5"/><circle cx="131.4" cy="181.5" r="7.5"/><circle cx="127" cy="165" r="7.5"/><circle cx="131.4" cy="148.5" r="7.5"/>
+          </g>
+          <circle cx="160" cy="165" r="16" fill="#fff4dc" stroke="#000" stroke-width="4"/>
+          <path d="M200 196 l12 10" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+          <rect x="84" y="86" width="16" height="14" rx="3" fill="#2a2a34" stroke="#000" stroke-width="4"/>
+          <rect x="220" y="86" width="16" height="14" rx="3" fill="#2a2a34" stroke="#000" stroke-width="4"/>
+          <g class="ringlines" stroke="#ffd60a" stroke-width="6" stroke-linecap="round"><path d="M30 40 l-18 -14"/><path d="M24 64 l-22 0"/><path d="M290 40 l18 -14"/><path d="M296 64 l22 0"/><path d="M60 18 l-8 -18"/><path d="M260 18 l8 -18"/></g>
+          <g class="handset">
+            <path d="M52 78 Q60 44 160 42 Q260 44 268 78 L270 92 Q258 104 232 98 L228 80 Q160 68 92 80 L88 98 Q62 104 50 92 Z" fill="#1c1c24" stroke="#000" stroke-width="6" stroke-linejoin="round"/>
+            <path d="M70 66 Q90 52 160 50" fill="none" stroke="#ff4b4b" stroke-width="4" stroke-linecap="round"/>
+            <ellipse cx="68" cy="96" rx="28" ry="11" fill="#2a2a34" stroke="#000" stroke-width="5"/>
+            <ellipse cx="252" cy="96" rx="28" ry="11" fill="#2a2a34" stroke="#000" stroke-width="5"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="dzyn ink" style="left:300px;top:440px" data-depth="1.4">ДЗЫНЬ!</div>
+
+    <!-- hacker -->
+    <div class="hood" data-depth="0.5" style="left:1260px;top:30px;width:300px;height:400px"><svg viewBox="0 0 200 260"><path d="M100 8 C58 8 34 50 36 98 C37 122 28 140 18 160 C6 186 0 224 0 260 L200 260 C200 224 194 186 182 160 C172 140 163 122 164 98 C166 50 142 8 100 8 Z" fill="url(#gHoodB)" stroke="#000" stroke-width="5"/><path d="M40 98 C38 56 60 14 100 12" fill="none" stroke="#3d7bff" stroke-width="3" opacity=".8"/><ellipse cx="100" cy="108" rx="31" ry="42" fill="#000"/><ellipse cx="100" cy="108" rx="31" ry="42" fill="url(#gFaceGlow)"/><ellipse class="eye" cx="88" cy="104" rx="6" ry="3" fill="url(#gEyeB)"/><ellipse class="eye" cx="112" cy="104" rx="6" ry="3" fill="url(#gEyeB)"/></svg></div>
+    <div class="lap-wrap" data-depth="0.9" style="left:1040px;top:200px;width:360px;height:320px">
+      <div class="lap">
+        <div class="lid"><div class="scr"><div class="codes" data-codes></div>
+          <svg class="skull" viewBox="0 0 120 120"><g stroke="#000" stroke-width="3" fill="#fff"><rect x="10" y="88" width="100" height="14" rx="7" transform="rotate(28 60 95)"/><rect x="10" y="88" width="100" height="14" rx="7" transform="rotate(-28 60 95)"/><path d="M60 8 C30 8 18 30 20 52 C21 64 28 70 34 74 L34 88 L86 88 L86 74 C92 70 99 64 100 52 C102 30 90 8 60 8Z"/></g><ellipse cx="44" cy="50" rx="11" ry="12" fill="#000"/><ellipse cx="76" cy="50" rx="11" ry="12" fill="#000"/><path d="M60 60 L54 72 L66 72Z" fill="#000"/><path d="M46 80 V88 M54 80 V88 M62 80 V88 M70 80 V88" stroke="#000" stroke-width="3"/></svg>
+        </div></div>
+        <div class="base"><div class="kb"></div><div class="pad"></div></div>
+      </div>
+    </div>
+
+    <!-- shield -->
+    <svg class="burst-svg" style="left:530px;top:-10px;width:540px;height:520px" viewBox="-270 -260 540 520"><g class="burst-pulse"><polygon class="burst-rot" data-burst="22,250,170" fill="#ffd60a" stroke="#000" stroke-width="7" stroke-linejoin="round"/></g><polygon class="burst-rot" data-burst="16,200,150" fill="#fff4b0" opacity=".9" style="animation-direction:reverse;animation-duration:30s"/></svg>
+    <div class="sh-wrap anim" data-a="zoom" style="left:640px;top:40px;width:320px;height:384px"><div class="sh-float"><div class="sh3d" data-shield></div></div></div>
+
+    <!-- title -->
+    <div class="abs" style="left:520px;top:488px;width:1060px;text-align:center">
+      <div class="anim" data-a="up" style="font-size:90px"><span class="ink">Киберпреступность</span> <span class="ink w">и</span></div>
+      <div class="anim" data-a="up" style="font-size:90px;margin-top:4px"><span class="ink w">цифровые</span> <span class="ink">мошенники</span></div>
+      <div class="anim" data-a="pop" style="font-size:44px;margin-top:18px"><span class="ink">Как закон защищает нас в сети</span></div>
+      <div class="anim" data-a="up" style="margin-top:20px"><span class="pill">Простыми словами о мошенниках, хакерах и защите данных</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 2. WHAT IS ================= -->
+<section class="slide" data-title="Что это такое">
+  <div class="bg bg-night"><div class="horizon"></div><div class="floor"></div></div>
+  <div class="bg halftone"></div>
+  <div class="stage">
+    <div class="abs anim" data-a="left" style="left:80px;top:66px">
+      <div class="chap"><span>ГЛАВА 01</span></div><br>
+      <h2 class="title"><span class="ink">Что такое</span> <span class="ink w">киберпреступность?</span></h2>
+    </div>
+    <div class="def panel anim" data-a="flip">
+      <span class="tag" style="position:absolute;top:-20px;left:24px;background:var(--r);color:#fff">ОПРЕДЕЛЕНИЕ</span>
+      <p><b>Киберпреступление</b> — это любое преступление, в котором оружием или целью становятся <b>компьютер, телефон, интернет</b> или <b>ваши личные данные</b>.</p>
+      <div class="chips"><span class="chip"><i data-ic="phone"></i>ТЕЛЕФОН</span><span class="chip"><i data-ic="globe"></i>ИНТЕРНЕТ</span><span class="chip"><i data-ic="user"></i>ДАННЫЕ</span></div>
+    </div>
+    <div class="bubble anim" data-a="pop">Простыми словами: вор тот же самый — только вместо отмычки у него телефон и ноутбук.</div>
+    <div class="stats">
+      <div class="anim" data-a="right"><div class="stat s1" data-tilt><div class="num"><span class="ink" data-count="40" data-pre="≈" data-suf="%">≈40%</span></div><p>всех преступлений в России за 2024 год совершены с помощью IT — это 765 тысяч дел<small>ДАННЫЕ МВД РОССИИ</small></p></div></div>
+      <div class="anim" data-a="right"><div class="stat s2" data-tilt><div class="num" style="font-size:80px"><span class="ink" data-count="27.5" data-dec="1" data-suf=" млрд ₽">27,5 млрд ₽</span></div><p>похитили мошенники со счетов клиентов банков за 2024 год<small>ДАННЫЕ БАНКА РОССИИ</small></p></div></div>
+      <div class="anim" data-a="right"><div class="stat s3" data-tilt><div class="num"><span class="ink">0</span></div><p>раз настоящий банк попросит у вас код из СМС, CVC-код или пароль<small>ЗАПОМНИ НАВСЕГДА</small></p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 3. VILLAINS ================= -->
+<section class="slide" data-title="Кто нам угрожает">
+  <div class="bg bg-red halftone"><div class="speed"></div></div>
+  <div class="bg vignette"></div>
+  <div class="stage">
+    <div class="abs anim" data-a="left" style="left:80px;top:66px">
+      <div class="chap"><span>ГЛАВА 02</span></div><br>
+      <h2 class="title"><span class="ink w">Кто нам</span> <span class="ink">угрожает?</span></h2>
+    </div>
+    <div class="abs anim" data-a="pop" style="left:1060px;top:110px"><span class="pill" style="font-size:18px">Нажми на карточку — она перевернётся</span></div>
+    <div class="cards4">
+      <div class="anim" data-a="flip"><div class="flip" data-stop data-tilt>
+        <div class="flip-in">
+          <div class="face"><div class="vill-top" style="background:linear-gradient(160deg,#ff3b30,#7a0a10)">
+            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="#fff4dc" stroke="#000" stroke-width="6"/><path d="M38 30h14l7 17-9 6a38 38 0 0 0 19 19l6-9 17 7v14a7 7 0 0 1-7 7A56 56 0 0 1 31 37a7 7 0 0 1 7-7z" fill="#ec1f28" stroke="#000" stroke-width="5" stroke-linejoin="round"/><path d="M76 26a22 22 0 0 1 18 18M74 38a10 10 0 0 1 8 8" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/></svg>
+          </div><div class="vill-body"><h3 class="ink">Телефонный мошенник</h3><p>Звонит и представляется банком, полицией или попавшим в беду родственником.</p><div class="hint"><i data-ic="flip"></i> Перевернуть</div></div></div>
+          <div class="face back"><h4>Как он действует</h4><div class="row"><b>ОРУЖИЕ</b><p>Страх, спешка и доверие к «официальному» голосу.</p></div><div class="row"><b>ПРИЗНАКИ</b><p>Просит код из СМС, перевести деньги «на безопасный счёт» или никому не рассказывать.</p></div></div>
+        </div></div></div>
+      <div class="anim" data-a="flip"><div class="flip" data-stop data-tilt>
+        <div class="flip-in">
+          <div class="face"><div class="vill-top" style="background:linear-gradient(160deg,#2b63ff,#061040)">
+            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="#0b1440" stroke="#000" stroke-width="6"/><path d="M60 18 C40 18 30 36 31 56 C32 66 26 74 20 84 C16 92 14 100 14 106 L106 106 C106 100 104 92 100 84 C94 74 88 66 89 56 C90 36 80 18 60 18Z" fill="#000" stroke="#7fdcff" stroke-width="3"/><ellipse cx="60" cy="60" rx="16" ry="21" fill="#0b1440"/><circle cx="54" cy="58" r="3" fill="#7fdcff"/><circle cx="66" cy="58" r="3" fill="#7fdcff"/><text x="60" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" font-weight="700" fill="#7fdcff">01101</text></svg>
+          </div><div class="vill-body"><h3 class="ink c">Хакер</h3><p>Взламывает аккаунты, сайты и базы данных, распространяет вирусы.</p><div class="hint"><i data-ic="flip"></i> Перевернуть</div></div></div>
+          <div class="face back"><h4>Как он действует</h4><div class="row"><b>ОРУЖИЕ</b><p>Вирусы, подбор паролей, дыры в программах.</p></div><div class="row"><b>ПРИЗНАКИ</b><p>Письма «ваш пароль изменён», входы с незнакомых устройств, странные сообщения от вашего имени.</p></div></div>
+        </div></div></div>
+      <div class="anim" data-a="flip"><div class="flip" data-stop data-tilt>
+        <div class="flip-in">
+          <div class="face"><div class="vill-top" style="background:linear-gradient(160deg,#ffd60a,#ff8a00)">
+            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="#fff4dc" stroke="#000" stroke-width="6"/><path d="M62 10 V64 a18 18 0 0 1 -36 0 l10 -8" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 10 V64 a18 18 0 0 1 -36 0 l10 -8" fill="none" stroke="#9aa3b5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><rect x="56" y="76" width="44" height="30" rx="5" fill="#ec1f28" stroke="#000" stroke-width="5"/><path d="M58 79 L78 94 L98 79" fill="none" stroke="#000" stroke-width="4"/></svg>
+          </div><div class="vill-body"><h3 class="ink">Фишер</h3><p>Делает поддельные сайты и ссылки-ловушки: «Вы выиграли!», «Подтвердите оплату».</p><div class="hint"><i data-ic="flip"></i> Перевернуть</div></div></div>
+          <div class="face back"><h4>Как он действует</h4><div class="row"><b>ОРУЖИЕ</b><p>Точная копия сайта банка, магазина или Госуслуг.</p></div><div class="row"><b>ПРИЗНАКИ</b><p>Странный адрес сайта (gosuslugi-pay.ru), «акция только сегодня», просьба ввести данные карты.</p></div></div>
+        </div></div></div>
+      <div class="anim" data-a="flip"><div class="flip" data-stop data-tilt>
+        <div class="flip-in">
+          <div class="face"><div class="vill-top" style="background:linear-gradient(160deg,#2a2d4a,#07081a)">
+            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="#fff4dc" stroke="#000" stroke-width="6"/><rect x="18" y="36" width="64" height="42" rx="6" fill="#2b63ff" stroke="#000" stroke-width="5"/><rect x="18" y="46" width="64" height="8" fill="#000"/><rect x="38" y="52" width="64" height="42" rx="6" fill="#ffd60a" stroke="#000" stroke-width="5"/><rect x="46" y="62" width="14" height="10" rx="2" fill="#c08000" stroke="#000" stroke-width="2"/><path d="M48 84 h30" stroke="#000" stroke-width="4" stroke-linecap="round"/><path d="M92 24 l10 10 -10 10" fill="none" stroke="#ec1f28" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div><div class="vill-body"><h3 class="ink">Дроппер</h3><p>Пропускает украденные деньги через свою карту за «лёгкий заработок».</p><div class="hint"><i data-ic="flip"></i> Перевернуть</div></div></div>
+          <div class="face back"><h4>Как он действует</h4><div class="row"><b>КТО ЭТО</b><p>Часто подростки и студенты, которым обещали деньги «просто за карту».</p></div><div class="row"><b>ВАЖНО</b><p>С 2025 года это отдельное преступление — до 6 лет лишения свободы (ст. 187 УК РФ).</p></div></div>
+        </div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 4. PHONE SCAMMERS ================= -->
+<section class="slide" data-title="Телефонные мошенники">
+  <div class="bg bg-red"><div class="speed" style="opacity:.6"></div></div>
+  <div class="bg halftone"></div><div class="bg vignette"></div>
+  <div class="stage">
+    <div class="abs anim" data-a="left" style="left:80px;top:66px">
+      <div class="chap"><span>ГЛАВА 03</span></div><br>
+      <h2 class="title"><span class="ink w">Алло, это</span> <span class="ink">мошенник!</span></h2>
+    </div>
+    <div class="ph-wrap anim" data-a="zoom"><div class="ph" data-phone><div class="ph-front"><div class="ph-shake"><div class="call">
+      <div class="call-top">Входящий вызов…</div>
+      <div class="ava">?<i></i><i></i><i></i></div>
+      <div class="call-name">Служба безопасности банка</div>
+      <div class="call-num">+7 (9**) ***-**-13</div>
+      <div class="call-warn">⚠ ВОЗМОЖНО, МОШЕННИКИ</div>
+      <div class="call-btns"><b class="dec">✕</b><b class="acc"><i data-ic="phone"></i></b></div>
+    </div></div></div></div></div>
+    <div class="bubs">
+      <div class="bub anim" data-a="right"><p class="q">«С вашей карты пытаются списать деньги! Нужно срочно действовать!»</p><div class="flag"><i data-ic="warn"></i>Давят на страх и спешку — чтобы вы не успели подумать</div></div>
+      <div class="bub anim" data-a="right"><p class="q">«Назовите код из СМС, чтобы отменить операцию».</p><div class="flag"><i data-ic="warn"></i>Код из СМС — ключ от вашего счёта. Банк его не спрашивает</div></div>
+      <div class="bub anim" data-a="right"><p class="q">«Переведите деньги на безопасный счёт Центробанка».</p><div class="flag"><i data-ic="warn"></i>«Безопасных счетов» не существует. Вообще</div></div>
+      <div class="bub anim" data-a="right"><p class="q">«Никому не говорите — идёт секретное расследование».</p><div class="flag"><i data-ic="warn"></i>Изолируют, чтобы близкие не успели вас остановить</div></div>
+    </div>
+    <div class="scen panel anim" data-a="flip">
+      <h3>ТОП-5 СЦЕНАРИЕВ</h3>
+      <ol>
+        <li>«Служба безопасности банка»</li>
+        <li>«Полиция, ФСБ, Центробанк»</li>
+        <li>«Мама, я попал в беду, срочно нужны деньги»</li>
+        <li>«Продиктуйте код: доставка, домофон, Госуслуги»</li>
+        <li>«Лёгкий заработок и инвестиции»</li>
+      </ol>
+    </div>
+    <div class="rule1 anim" data-a="pop"><b>ПРАВИЛО №1</b><span>Положи трубку и перезвони сам — по номеру с обратной стороны карты.</span></div>
+  </div>
+</section>
+
+<!-- ================= 5. HACKERS ================= -->
+<section class="slide" data-title="Хакеры">
+  <div class="bg bg-blue"></div>
+  <div class="bg"><canvas class="full" data-rain="matrix"></canvas></div>
+  <div class="bg scan"></div><div class="bg vignette"></div>
+  <div class="stage">
+    <div class="abs anim" data-a="left" style="left:80px;top:66px">
+      <div class="chap"><span>ГЛАВА 04</span></div><br>
+      <h2 class="title glitch-a"><span class="ink c">Хакеры:</span> <span class="ink w">как взламывают</span></h2>
+    </div>
+    <div class="lap-wrap lap-big anim" data-a="zoom">
+      <div class="lap">
+        <div class="lid"><div class="scr"><div class="term" data-term></div></div></div>
+        <div class="base"><div class="kb"></div><div class="pad"></div></div>
+      </div>
+    </div>
+    <div class="quote-h anim" data-a="up">Хакеру не нужна магия — чаще всего он просто пользуется нашей невнимательностью.</div>
+    <div class="methods">
+      <div class="anim" data-a="right"><div class="meth" data-tilt><div class="mi"><i data-ic="hook"></i></div><div><h3>ФИШИНГ</h3><p>Поддельная страница входа выглядит как настоящая — и крадёт логин и пароль.</p></div></div></div>
+      <div class="anim" data-a="right"><div class="meth" data-tilt><div class="mi"><i data-ic="key"></i></div><div><h3>ПОДБОР ПАРОЛЕЙ</h3><p>Пароль «123456» или «qwerty» программа угадывает меньше чем за секунду.</p></div></div></div>
+      <div class="anim" data-a="right"><div class="meth" data-tilt><div class="mi"><i data-ic="bug"></i></div><div><h3>ВИРУСЫ</h3><p>Прячутся во вложениях писем, «бесплатных» читах, играх и взломанных программах.</p></div></div></div>
+      <div class="anim" data-a="right"><div class="meth" data-tilt><div class="mi"><i data-ic="db"></i></div><div><h3>УТЕЧКИ БАЗ</h3><p>Взламывают магазин или сервис — и уносят данные миллионов людей сразу.</p></div></div></div>
+      <div class="anim" data-a="right"><div class="meth" data-tilt><div class="mi"><i data-ic="wifi"></i></div><div><h3>ЛОЖНЫЙ WI-FI</h3><p>«Бесплатная» сеть в кафе или аэропорту может перехватывать ваши данные.</p></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 6. LAW ================= -->
+<section class="slide" data-title="Закон">
+  <div class="bg bg-night"><div class="grid-bg"></div></div>
+  <div class="bg halftone"></div><div class="bg vignette"></div>
+  <div class="stage">
+    <div class="abs anim" data-a="left" style="left:80px;top:66px">
+      <div class="chap"><span>ГЛАВА 05</span></div><br>
+      <h2 class="title"><span class="ink w">Закон знает их</span> <span class="ink">всех</span></h2>
+    </div>
+    <div class="abs anim" data-a="pop" style="left:1000px;top:108px"><span class="pill" style="font-size:18px">Уголовный кодекс РФ · нажми на статью</span></div>
+    <div class="law-grid">
+      <div class="anim" data-a="flip"><div class="flip law" data-stop><div class="flip-in"><div class="face front"><div class="art">СТАТЬЯ УК РФ</div><div class="num"><span class="ink">159</span></div><div class="nm">Мошенничество</div><div class="hint"><i data-ic="flip"></i> Простыми словами</div></div><div class="face back"><small>Простыми словами</small><p>Обманом или злоупотребив доверием, выманил чужие деньги или имущество.</p><div class="term-y">ДО <span>10 ЛЕТ</span></div></div></div></div></div>
+      <div class="anim" data-a="flip"><div class="flip law" data-stop><div class="flip-in"><div class="face front"><div class="art">СТАТЬЯ УК РФ</div><div class="num"><span class="ink">159.3</span></div><div class="nm">Мошенничество с электронными средствами платежа</div><div class="hint"><i data-ic="flip"></i> Простыми словами</div></div><div class="face back"><small>Простыми словами</small><p>Обманом расплатился чужой картой или электронным кошельком.</p><div class="term-y">ДО <span>10 ЛЕТ</span></div></div></div></div></div>
+      <div class="anim" data-a="flip"><div class="flip law" data-stop><div class="flip-in"><div class="face front"><div class="art">СТАТЬЯ УК РФ</div><div class="num"><span class="ink">159.6</span></div><div class="nm">Мошенничество в сфере компьютерной информации</div><div class="hint"><i data-ic="flip"></i> Простыми словами</div></div><div class="face back"><small>Простыми словами</small><p>Украл деньги, вмешавшись в работу программ или подменив данные.</p><div class="term-y">ДО <span>10 ЛЕТ</span></div></div></div></div></div>
+      <div class="anim" data-a="flip"><div class="flip law" data-stop><div class="flip-in"><div class="face front"><div class="art">СТ. 158 Ч.3 П.«Г»</div><div class="num"><span class="ink">158</span></div><div class="nm">Кража с банковского счёта</div><div class="hint"><i data-ic="flip"></i> Простыми словами</div></div><div class="face back"><small>Простыми словами</small><p>Тайно списал деньги с чужой карты или счёта — без всякого обмана.</p><div class="term-y">ДО <span>6 ЛЕТ</span></div></div></div></div></div>
+      <div class="anim" data-a="flip"><div class="flip law" data-stop><div class="flip-in"><div class="face front"><div class="art">СТАТЬЯ УК РФ</div><div class="num"><span class="ink c">272</span></div><div class="nm">Неправомерный доступ к компьютерной информации</div><div class="hint"><i data-ic="flip"></i> Простыми словами</div></div><div class="face back"><small>Простыми словами</small><p>Взломал чужой аккаунт, почту, сервер или базу данных.</p><div class="term-y">ДО <span>7 ЛЕТ</span></div></div></div></div></div>
+      <div class="anim" data-a="flip"><div class="flip law" data-stop><div class="flip-in"><div class="face front"><div class="art">СТАТЬЯ УК РФ</div><div class="num"><span class="ink c">273</span></div><div class="nm">Создание и распространение вредоносных программ</div><div class="hint"><i data-ic="flip"></i> Простыми словами</div></div><div class="face back"><small>Простыми словами</small><p>Написал, распространял или использовал компьютерный вирус.</p><div class="term-y">ДО <span>7 ЛЕТ</span></div></div></div></div></div>
+      <div class="anim" data-a="flip"><div class="flip law" data-stop><div class="flip-in"><div class="face front"><div class="art">СТАТЬЯ УК РФ · 2024</div><div class="num"><span class="ink c">272.1</span></div><div class="nm">Незаконный оборот персональных данных</div><div class="hint"><i data-ic="flip"></i> Простыми словами</div></div><div class="face back"><small>Простыми словами</small><p>Незаконно собирал, хранил, продавал или передавал чужие личные данные.</p><div class="term-y">ДО <span>10 ЛЕТ</span></div></div></div></div></div>
+      <div class="anim" data-a="flip"><div class="flip law" data-stop><div class="flip-in"><div class="face front"><div class="art">СТАТЬЯ УК РФ · 2025</div><div class="num"><span class="ink c">187</span></div><div class="nm">Неправомерный оборот средств платежей (дропперы)</div><div class="hint"><i data-ic="flip"></i> Простыми словами</div></div><div class="face back"><small>Простыми словами</small><p>Отдал свою карту или доступ к счёту чужим людям — или провёл через неё чужие деньги.</p><div class="term-y">ДО <span>6 ЛЕТ</span></div></div></div></div></div>
+    </div>
+    <div class="law-strip anim" data-a="up"><i data-ic="shield"></i><div>Ещё нас защищают: <b>152-ФЗ</b> «О персональных данных» · <b>161-ФЗ</b> «О национальной платёжной системе» · <b>41-ФЗ</b> (2025) — маркировка звонков компаний, самозапрет на SIM-карты · <b>самозапрет на кредиты</b> через Госуслуги</div></div>
+  </div>
+</section>
+
+<!-- ================= 7. HOW PHONE SCAMMERS ARE CAUGHT ================= -->
+<section class="slide" data-title="Как ловят мошенников">
+  <div class="bg bg-blue"><div class="grid-bg"></div></div>
+  <div class="bg halftone"></div><div class="bg vignette"></div>
+  <div class="stage">
+    <div class="abs anim" data-a="left" style="left:80px;top:66px">
+      <div class="chap"><span>ГЛАВА 06</span></div><br>
+      <h2 class="title"><span class="ink w">Как ловят</span> <span class="ink">телефонных мошенников</span></h2>
+    </div>
+    <svg class="pipe anim" data-a="zoom" viewBox="0 0 1600 900" data-pipe>
+      <path class="track" d="M280 330 L1320 330 C1540 330 1540 640 1320 640 L280 640"/>
+      <path class="track2" d="M280 330 L1320 330 C1540 330 1540 640 1320 640 L280 640"/>
+      <path class="dash" id="pipePath" d="M280 330 L1320 330 C1540 330 1540 640 1320 640 L280 640"/>
+      <g data-nodes></g>
+      <g class="runner"><circle r="22" fill="#ffd60a" stroke="#000" stroke-width="5"/><circle r="9" fill="#ec1f28"/></g>
+    </svg>
+    <div class="stepc panel anim" data-a="up" style="left:85px;top:405px"><h3>1. ЗАЯВЛЕНИЕ</h3><p>Вы сообщаете в полицию: 102, лично или через Госуслуги. Без заявления дело не начнётся.</p></div>
+    <div class="stepc panel anim" data-a="up" style="left:605px;top:405px"><h3>2. СЛЕД ЗВОНКА</h3><p>Операторы связи передают следствию данные о номере, SIM-карте и вышках связи.</p></div>
+    <div class="stepc panel anim" data-a="up" style="left:1125px;top:405px"><h3>3. СЛЕД ДЕНЕГ</h3><p>Банки и ФинЦЕРТ Банка России отслеживают перевод по цепочке карт и блокируют счета.</p></div>
+    <div class="stepc panel anim" data-a="up" style="left:1125px;top:715px"><h3>4. ДРОППЕРЫ</h3><p>Владельцев карт, через которые шли деньги, находят первыми — они выводят на организаторов.</p></div>
+    <div class="stepc panel anim" data-a="up" style="left:605px;top:715px"><h3>5. ЗАДЕРЖАНИЕ</h3><p>Оперативники находят колл-центр и изымают телефоны, SIM-карты, компьютеры.</p></div>
+    <div class="stepc panel anim" data-a="up" style="left:85px;top:715px"><h3>6. СУД</h3><p>Приговор по статьям УК РФ и обязанность возместить ущерб пострадавшим.</p></div>
+  </div>
+</section>
+
+<!-- ================= 8. HOW HACKERS ARE CAUGHT ================= -->
+<section class="slide" data-title="Как ловят хакеров">
+  <div class="bg bg-night"><div class="grid-bg"></div></div>
+  <div class="bg halftone"></div><div class="bg vignette"></div>
+  <div class="stage">
+    <div class="abs anim" data-a="left" style="left:80px;top:66px">
+      <div class="chap"><span>ГЛАВА 07</span></div><br>
+      <h2 class="title"><span class="ink w">Как ловят</span> <span class="ink c">хакеров</span></h2>
+    </div>
+    <div class="globe-box anim" data-a="zoom"><canvas data-globe width="700" height="700"></canvas></div>
+    <div class="clues">
+      <div class="anim" data-a="right"><div class="clue panel" data-tilt><div class="ci"><i data-ic="search"></i></div><div><h3>IP-АДРЕСА И ЛОГИ</h3><p>Каждый вход в сеть оставляет запись на серверах. По запросу следствия провайдеры раскрывают, кто это был.</p></div></div></div>
+      <div class="anim" data-a="right"><div class="clue panel" data-tilt><div class="ci"><i data-ic="link"></i></div><div><h3>СЛЕД КРИПТОВАЛЮТЫ</h3><p>Блокчейн хранит каждый перевод навсегда — аналитики прослеживают цепочку до биржи и владельца.</p></div></div></div>
+      <div class="anim" data-a="right"><div class="clue panel" data-tilt><div class="ci"><i data-ic="eye"></i></div><div><h3>ОШИБКИ ХАКЕРОВ</h3><p>Один ник на разных форумах, личная почта, вход без VPN — и «аноним» перестаёт быть анонимом.</p></div></div></div>
+      <div class="anim" data-a="right"><div class="clue panel" data-tilt><div class="ci"><i data-ic="doc"></i></div><div><h3>КОМПЬЮТЕРНАЯ ЭКСПЕРТИЗА</h3><p>Эксперты изучают изъятые устройства и восстанавливают даже удалённые файлы и переписки.</p></div></div></div>
+      <div class="anim" data-a="right"><div class="clue panel" data-tilt><div class="ci"><i data-ic="people"></i></div><div><h3>КОМАНДНАЯ РАБОТА</h3><p>Киберподразделения полиции работают вместе с банками, операторами связи и IT-компаниями.</p></div></div></div>
+    </div>
+    <div class="bigq anim" data-a="pop">«Анонимности в интернете не бывает — бывает отложенное наказание»</div>
+  </div>
+</section>
+
+<!-- ================= 9. ACCOUNT STOLEN ================= -->
+<section class="slide" data-title="Украли аккаунт">
+  <div class="bg bg-red"><div class="speed" style="opacity:.5"></div></div>
+  <div class="bg halftone"></div><div class="bg vignette"></div>
+  <div class="stage">
+    <div class="abs anim" data-a="left" style="left:80px;top:66px">
+      <div class="chap"><span>ГЛАВА 08 · ЧТО ДЕЛАТЬ</span></div><br>
+      <h2 class="title"><span class="ink w">Украли аккаунт?</span> <span class="ink">Без паники!</span></h2>
+    </div>
+    <div class="lock-wrap anim lock-open" data-a="zoom" data-lock><div class="lock3d" data-lock3d></div></div>
+    <div class="lock-status anim" data-a="up"><div class="st ink" data-lock-st>ЗАМОК ОТКРЫТ: 0 / 7</div><div class="bar"><i data-lock-bar></i></div><div style="margin-top:10px;font-size:16px;font-weight:600;opacity:.9">Отмечай шаги — и замок защиты закроется</div></div>
+    <ul class="chk" data-check>
+      <li class="anim" data-a="right" data-stop><span class="box"><i data-ic="check"></i></span><span class="t"><b>Восстанови доступ</b> через официальную форму «Забыли пароль?» или поддержку сервиса.</span><span class="stamp">ГОТОВО</span></li>
+      <li class="anim" data-a="right" data-stop><span class="box"><i data-ic="check"></i></span><span class="t"><b>Смени пароль</b> на длинный и уникальный и <b>включи двухфакторную защиту</b>.</span><span class="stamp">ГОТОВО</span></li>
+      <li class="anim" data-a="right" data-stop><span class="box"><i data-ic="check"></i></span><span class="t"><b>Заверши чужие сеансы:</b> «Выйти на всех устройствах» в настройках.</span><span class="stamp">ГОТОВО</span></li>
+      <li class="anim" data-a="right" data-stop><span class="box"><i data-ic="check"></i></span><span class="t"><b>Предупреди друзей и родных:</b> от твоего имени могут просить деньги.</span><span class="stamp">ГОТОВО</span></li>
+      <li class="anim" data-a="right" data-stop><span class="box"><i data-ic="check"></i></span><span class="t"><b>Проверь почту и другие аккаунты,</b> где стоял такой же пароль, — смени и там.</span><span class="stamp">ГОТОВО</span></li>
+      <li class="anim" data-a="right" data-stop><span class="box"><i data-ic="check"></i></span><span class="t"><b>Сохрани доказательства:</b> скриншоты, ссылки, переписку, номера.</span><span class="stamp">ГОТОВО</span></li>
+      <li class="anim" data-a="right" data-stop><span class="box"><i data-ic="check"></i></span><span class="t"><b>Обратись в полицию,</b> если от твоего имени обманывали людей или украли деньги.</span><span class="stamp">ГОТОВО</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= 10. MONEY / DATA ================= -->
+<section class="slide" data-title="Деньги и данные">
+  <div class="bg bg-blue"></div>
+  <div class="hero-red bg-red" style="clip-path:polygon(0 0,52% 0,48% 100%,0 100%)"></div>
+  <div class="bg halftone"></div><div class="bg vignette"></div>
+  <div class="stage">
+    <div class="abs anim" data-a="left" style="left:80px;top:66px">
+      <div class="chap"><span>ГЛАВА 09 · ЧТО ДЕЛАТЬ</span></div><br>
+      <h2 class="title"><span class="ink w">Украли деньги</span> <span class="ink">или данные</span></h2>
+    </div>
+    <div class="two">
+      <div class="anim" data-a="left"><div class="col red">
+        <div class="timer"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="#000" stroke-width="5" stroke-dasharray="4 8"/><line class="hand" x1="50" y1="50" x2="50" y2="14" stroke="#ec1f28" stroke-width="6" stroke-linecap="round"/></svg><span style="position:relative;margin-top:44px">ЧАСЫ<br>ТИКАЮТ</span></div>
+        <h3><span class="hi"><i data-ic="card"></i></span><span class="ink w">Списали деньги</span></h3>
+        <ol>
+          <li><span><b>Сразу звони в банк</b> по номеру на обороте карты и блокируй карту.</span></li>
+          <li><span>Подай в банк <b>заявление о несогласии с операцией</b> — не позднее следующего дня после уведомления о списании.</span></li>
+          <li><span><b>Заявление в полицию:</b> 102, лично в отделе или через Госуслуги.</span></li>
+          <li><span>Сохрани <b>выписку, номера, переписку</b> — это доказательства.</span></li>
+        </ol>
+        <div class="note-y">Если банк пропустил перевод на счёт из базы мошенников Банка России — по закону он обязан вернуть деньги в течение 30 дней.</div>
+      </div></div>
+      <div class="anim" data-a="right"><div class="col blue">
+        <h3><span class="hi"><i data-ic="db"></i></span><span class="ink w">Утекли данные</span></h3>
+        <ol>
+          <li><span><b>Смени пароли</b> и включи двухфакторную защиту везде, где можно.</span></li>
+          <li><span>Поставь <b>самозапрет на кредиты</b> на Госуслугах — бесплатно, за пару минут.</span></li>
+          <li><span>Проверь <b>кредитную историю</b> и <b>SIM-карты на твоё имя</b> через Госуслуги.</span></li>
+          <li><span>Жди «звонков из банка», где назовут твоё имя и паспорт, — <b>не верь им</b>.</span></li>
+          <li><span>Пожалуйся в <b>Роскомнадзор</b> на компанию, допустившую утечку, — её накажут.</span></li>
+        </ol>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 11. RULES ================= -->
+<section class="slide" data-title="Золотые правила">
+  <div class="bg bg-night"><div class="horizon" style="top:30%"></div><div class="floor" style="height:80%"></div></div>
+  <div class="bg halftone"></div><div class="bg vignette"></div>
+  <div class="stage">
+    <div class="abs anim" data-a="left" style="left:80px;top:66px">
+      <div class="chap"><span>ГЛАВА 10</span></div><br>
+      <h2 class="title"><span class="ink">8 золотых правил</span> <span class="ink w">киберзащиты</span></h2>
+    </div>
+    <div class="rules">
+      <div class="anim" data-a="flip"><div class="rule" data-tilt><span class="n">1</span><div class="ri"><i data-ic="phone"></i></div><h3>Положи трубку — перезвони сам</h3><p>По номеру с обратной стороны карты или с официального сайта.</p></div></div>
+      <div class="anim" data-a="flip"><div class="rule" data-tilt><span class="n">2</span><div class="ri"><i data-ic="sms"></i></div><h3>Код из СМС — только твой</h3><p>Его не спрашивают ни банк, ни полиция, ни Госуслуги.</p></div></div>
+      <div class="anim" data-a="flip"><div class="rule" data-tilt><span class="n">3</span><div class="ri"><i data-ic="bank"></i></div><h3>«Безопасных счетов» не бывает</h3><p>Любая просьба «перевести деньги в безопасность» — обман.</p></div></div>
+      <div class="anim" data-a="flip"><div class="rule" data-tilt><span class="n">4</span><div class="ri"><i data-ic="link"></i></div><h3>Не жми на странные ссылки</h3><p>Проверяй адрес сайта по буквам. Призы «просто так» не дарят.</p></div></div>
+      <div class="anim" data-a="flip"><div class="rule" data-tilt><span class="n">5</span><div class="ri"><i data-ic="key"></i></div><h3>Разные пароли + 2FA</h3><p>Длинный пароль для каждого сайта и двухфакторная защита.</p></div></div>
+      <div class="anim" data-a="flip"><div class="rule" data-tilt><span class="n">6</span><div class="ri"><i data-ic="app"></i></div><h3>Не ставь приложения по звонку</h3><p>Программы «для защиты» по просьбе звонящего дают доступ к телефону.</p></div></div>
+      <div class="anim" data-a="flip"><div class="rule" data-tilt><span class="n">7</span><div class="ri"><i data-ic="clock"></i></div><h3>Спешка + страх = мошенник</h3><p>Если торопят и пугают — остановись и посоветуйся с близкими.</p></div></div>
+      <div class="anim" data-a="flip"><div class="rule" data-tilt><span class="n">8</span><div class="ri"><i data-ic="eye"></i></div><h3>Меньше личного в сети</h3><p>Не публикуй паспорт, билеты, адрес и номер карты.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 12. QUIZ ================= -->
+<section class="slide" data-title="Проверь себя">
+  <div class="bg bg-blue"><div class="speed" style="opacity:.5"></div></div>
+  <div class="bg halftone"></div><div class="bg vignette"></div>
+  <div class="stage">
+    <div class="abs anim" data-a="left" style="left:80px;top:66px">
+      <div class="chap"><span>ГЛАВА 11 · ИГРА</span></div><br>
+      <h2 class="title"><span class="ink">Мошенник</span> <span class="ink w">или нет?</span></h2>
+    </div>
+    <div class="score anim" data-a="pop"><div class="sv" data-score>0 / 4</div><small>правильных ответов</small></div>
+    <div class="quiz" data-quiz>
+      <div class="anim" data-a="flip"><div class="qcard" data-stop data-correct="scam"><div class="qh"><span class="tag">СИТУАЦИЯ 1</span><i data-ic="phone" style="font-size:28px"></i></div><p class="sit">Звонок: «Служба безопасности банка. С вашей карты пытаются списать деньги — назовите код из СМС, чтобы отменить операцию».</p><div class="qbtns"><button class="bs" data-ans="scam">МОШЕННИК</button><button class="bo" data-ans="ok">ВСЁ ОК</button></div>
+        <div class="qres"><div class="big" data-v></div><p>Это мошенник. Банк никогда не просит код из СМС. Положи трубку и перезвони в банк сам.</p><button data-reset>Ещё раз</button></div></div></div>
+      <div class="anim" data-a="flip"><div class="qcard" data-stop data-correct="ok"><div class="qh"><span class="tag">СИТУАЦИЯ 2</span><i data-ic="bank" style="font-size:28px"></i></div><p class="sit">В официальном приложении банка пришло уведомление о входе с нового устройства. Ты сам звонишь по номеру с обратной стороны карты.</p><div class="qbtns"><button class="bs" data-ans="scam">МОШЕННИК</button><button class="bo" data-ans="ok">ВСЁ ОК</button></div>
+        <div class="qres"><div class="big" data-v></div><p>Всё правильно! Ты сам позвонил по официальному номеру — так и нужно действовать.</p><button data-reset>Ещё раз</button></div></div></div>
+      <div class="anim" data-a="flip"><div class="qcard" data-stop data-correct="scam"><div class="qh"><span class="tag">СИТУАЦИЯ 3</span><i data-ic="sms" style="font-size:28px"></i></div><p class="sit">Сообщение с незнакомого номера: «Мама, я потерял телефон, это мой новый номер. Срочно скинь 5000, потом объясню!»</p><div class="qbtns"><button class="bs" data-ans="scam">МОШЕННИК</button><button class="bo" data-ans="ok">ВСЁ ОК</button></div>
+        <div class="qres"><div class="big" data-v></div><p>Классическая схема «родственник в беде». Перезвони близкому на старый номер или спроси то, что знаете только вы.</p><button data-reset>Ещё раз</button></div></div></div>
+      <div class="anim" data-a="flip"><div class="qcard" data-stop data-correct="scam"><div class="qh"><span class="tag">СИТУАЦИЯ 4</span><i data-ic="gift" style="font-size:28px"></i></div><p class="sit">«Поздравляем! Вы выиграли смартфон! Оплатите только доставку 299 ₽ по ссылке — акция действует 15 минут».</p><div class="qbtns"><button class="bs" data-ans="scam">МОШЕННИК</button><button class="bo" data-ans="ok">ВСЁ ОК</button></div>
+        <div class="qres"><div class="big" data-v></div><p>Фишинг! «Подарок» нужен, чтобы ты ввёл данные карты на фальшивом сайте. Спешка — главный признак обмана.</p><button data-reset>Ещё раз</button></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 13. FINAL ================= -->
+<section class="slide" data-title="Финал">
+  <div class="bg bg-blue"><div class="grid-bg"></div></div>
+  <div class="hero-red bg-red halftone" style="clip-path:polygon(0 0,40% 0,34% 100%,0 100%)"><div class="speed"></div></div>
+  <div class="bg vignette"></div>
+  <div class="stage">
+    <svg class="burst-svg" style="left:60px;top:150px;width:560px;height:560px" viewBox="-280 -280 560 560"><g class="burst-pulse"><polygon class="burst-rot" data-burst="24,260,180" fill="#ffd60a" stroke="#000" stroke-width="7" stroke-linejoin="round"/></g></svg>
+    <div class="sh-wrap anim" data-a="zoom" style="left:180px;top:190px;width:320px;height:384px"><div class="sh-float"><div class="sh3d" data-shield></div></div></div>
+    <button class="restart anim" data-a="pop" data-restart>↺ СМОТРЕТЬ СНАЧАЛА</button>
+    <div class="abs anim" data-a="right" style="left:760px;top:70px;width:800px">
+      <h2 style="font-size:84px;line-height:1"><span class="ink">Закон —</span><br><span class="ink w">на твоей стороне</span></h2>
+    </div>
+    <div class="contacts">
+      <div class="anim" data-a="flip"><div class="ct" data-tilt><div class="cn">102</div><p>Полиция — с мобильного телефона, бесплатно</p></div></div>
+      <div class="anim" data-a="flip"><div class="ct" data-tilt><div class="cn">112</div><p>Единый номер экстренных служб</p></div></div>
+      <div class="anim" data-a="flip"><div class="ct" data-tilt><div class="cn sm">Номер на карте</div><p>Горячая линия твоего банка — звони сам</p></div></div>
+      <div class="anim" data-a="flip"><div class="ct" data-tilt><div class="cn sm">Госуслуги</div><p>Заявления, самозапрет на кредиты и SIM-карты</p></div></div>
+    </div>
+    <div class="final-line anim" data-a="up">Мошенник силён, пока ты молчишь. Расскажи — и закон сработает. <b style="color:var(--y)">Спасибо за внимание!</b></div>
+  </div>
+</section>
+
+</div>
+
+<canvas id="fx"></canvas>
+<div id="slash"><i></i><i></i><i></i><i></i></div>
+
+<div class="ui topbar">
+  <div></div>
+  <div class="tr"><div class="counter"><span data-counter>01 / 13</span></div><button class="ibtn" data-fs title="Полный экран (F)"><i data-ic="full"></i></button></div>
+</div>
+<button class="ui nav-arrow prev" data-prev title="Назад (←)"><i data-ic="left"></i></button>
+<button class="ui nav-arrow next" data-next title="Вперёд (→)"><i data-ic="right"></i></button>
+<div class="ui bottombar"><div class="dots" data-dots></div></div>
+<div class="progress" data-progress></div>
+<div class="hint-click" data-hint>Кликни в любом месте или нажми →</div>
+<div class="rotate-hint">Поверни телефон горизонтально — так будет красивее</div>
+
+<script>
+(()=>{
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const SH="M100 8 C128 24 160 28 190 26 L190 112 C190 172 150 212 100 234 C50 212 10 172 10 112 L10 26 C40 28 72 24 100 8 Z";
+
+/* ---------- icons ---------- */
+const C=(x,y,r)=>`M${x-r} ${y}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0`;
+const IC={
+ phone:"M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z",
+ sms:"M4 4h16v12H9l-5 4zM8 9h8M8 12h5",
+ card:"M3 6h18v12H3zM3 10h18M6 15h4",
+ link:"M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1",
+ lock:"M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4",
+ app:"M7 2h10v20H7zM12 7v8M9 12l3 3 3-3",
+ clock:C(12,12,9)+"M12 7v5l3 2",
+ eye:"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"+C(12,12,3),
+ shield:"M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z",
+ doc:"M6 2h9l4 4v16H6zM14 2v5h5M9 12h7M9 16h7",
+ user:C(12,8,4)+"M4 21c1-4 4-6 8-6s7 2 8 6",
+ people:C(9,8,3.5)+"M2 20c.8-3.5 3.5-5.5 7-5.5s6.2 2 7 5.5"+C(17,9,2.8)+"M17 14.5c2.5 0 4.3 1.6 5 4.5",
+ wifi:"M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5v.5",
+ bug:"M8 9h8v7a4 4 0 0 1-8 0zM9 9a3 3 0 0 1 6 0M3 13h5M16 13h5M4 8l4 2M20 8l-4 2M4 19l4-2M20 19l-4-2",
+ db:"M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3",
+ key:C(7.5,15.5,4.5)+"M10.7 12.3L21 2M16 7l3 3M14 9l2 2",
+ warn:"M12 3l10 18H2zM12 10v5M12 18v.5",
+ hook:"M14 2v12a5 5 0 0 1-10 0l3-3M14 2h4",
+ globe:C(12,12,9)+"M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18",
+ search:C(10.5,10.5,6.5)+"M21 21l-5.5-5.5",
+ bank:"M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18",
+ gift:"M3 9h18v4H3zM5 13h14v8H5zM12 9v12M12 9c-2-4-6-4-6-1.5S12 9 12 9s6 1 6-1.5S14 5 12 9",
+ check:"M4 12.5l5 5L20 6",
+ flip:"M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5",
+ left:"M15 5l-7 7 7 7", right:"M9 5l7 7-7 7",
+ full:"M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
+};
+$$('[data-ic]').forEach(el=>{const p=IC[el.dataset.ic]; if(!p)return; el.outerHTML=`<svg class="ic" viewBox="0 0 24 24"><path d="${p}"/></svg>`;});
+
+/* ---------- comic ink text ---------- */
+$$('.ink').forEach(el=>{ if(!el.dataset.text) el.dataset.text=el.textContent; });
+
+/* ---------- bursts ---------- */
+$$('[data-burst]').forEach(p=>{
+  const [n,r1,r2]=p.dataset.burst.split(',').map(Number); let pts=[];
+  for(let i=0;i<n*2;i++){const a=i/(n*2)*Math.PI*2, r=(i%2?r2:r1)*(0.86+Math.random()*0.22); pts.push((Math.cos(a)*r).toFixed(1)+','+(Math.sin(a)*r).toFixed(1));}
+  p.setAttribute('points',pts.join(' '));
+});
+
+/* ---------- 3D shield ---------- */
+function shieldFront(){return `<svg viewBox="0 0 200 240">
+ <path d="${SH}" fill="#000" transform="translate(100 121) scale(1.04) translate(-100 -121)"/>
+ <path d="${SH}" fill="url(#gRim)"/>
+ <g transform="translate(100 121) scale(.82) translate(-100 -121)">
+  <path d="${SH}" fill="#000" transform="translate(100 121) scale(1.03) translate(-100 -121)"/>
+  <g clip-path="url(#cpSh)">
+   <rect x="0" y="0" width="100" height="240" fill="url(#gBL)"/><rect x="100" y="0" width="100" height="240" fill="url(#gBR)"/>
+   <rect x="100" y="0" width="100" height="240" fill="url(#dots)" opacity=".35"/>
+   <path d="M0 0 H200 V58 Q100 92 0 58Z" fill="#fff" opacity=".13"/>
+   <rect class="shine" x="60" y="-20" width="60" height="280" fill="url(#gShine)" transform="skewX(-20)"/>
+  </g>
+ </g>
+ <g stroke="#000" stroke-width="3" stroke-linejoin="round">
+  <rect x="95" y="62" width="10" height="114" rx="3" fill="url(#gGold)"/>
+  <circle cx="100" cy="57" r="9" fill="url(#gGold)"/>
+  <rect x="84" y="174" width="32" height="11" rx="3" fill="url(#gGold)"/>
+  <path d="M74 185 L126 185 L134 199 L66 199 Z" fill="url(#gGold)"/>
+  <g class="beam">
+   <path d="M44 80 Q100 66 156 80 L156 88 Q100 75 44 88Z" fill="url(#gGold)"/>
+   <circle cx="48" cy="84" r="4" fill="url(#gGold)"/><circle cx="152" cy="84" r="4" fill="url(#gGold)"/>
+   <g class="panL"><path d="M48 86 L30 132 M48 86 L66 132" fill="none" stroke-width="2.5"/><path d="M22 131 H74 Q68 152 48 152 Q28 152 22 131Z" fill="url(#gGold)"/></g>
+   <g class="panR"><path d="M152 86 L134 132 M152 86 L170 132" fill="none" stroke-width="2.5"/><path d="M126 131 H178 Q172 152 152 152 Q132 152 126 131Z" fill="url(#gGold)"/></g>
+  </g>
+ </g>
+</svg>`;}
+$$('[data-shield]').forEach(el=>{
+  let h=''; const N=14;
+  for(let i=N;i>=1;i--){const t=i/N; const col=i<3?'#ffd60a':`rgb(${Math.round(150-90*t)},${Math.round(105-75*t)},${Math.round(10)})`;
+    h+=`<svg viewBox="0 0 200 240" style="transform:translateZ(${-i*2.2}px)"><path d="${SH}" fill="${col}" stroke="#000" stroke-width="2"/></svg>`;}
+  h+=`<svg viewBox="0 0 200 240" style="transform:translateZ(${-N*2.2-1}px) rotateY(180deg)"><path d="${SH}" fill="#0a1c66" stroke="#000" stroke-width="6"/><path d="${SH}" fill="url(#dotsW)" opacity=".15"/></svg>`;
+  h+=`<div style="position:absolute;inset:0;transform:translateZ(1px)">${shieldFront()}</div>`;
+  el.innerHTML=h;
+});
+
+/* ---------- 3D phone & lock layers ---------- */
+$$('[data-phone]').forEach(el=>{let h='';for(let i=7;i>=1;i--)h+=`<div class="ph-layer" style="transform:translateZ(${-i*3}px)"></div>`;el.insertAdjacentHTML('afterbegin',h);});
+const LOCK_BODY="M30 120 Q30 108 42 108 L158 108 Q170 108 170 120 L170 222 Q170 236 156 236 L44 236 Q30 236 30 222Z";
+$$('[data-lock3d]').forEach(el=>{
+  let h='';for(let i=10;i>=1;i--)h+=`<svg viewBox="0 0 200 250" style="transform:translateZ(${-i*2.5}px)"><path d="${LOCK_BODY}" fill="${i<3?'#888':'#2a2a34'}" stroke="#000" stroke-width="2"/></svg>`;
+  h+=`<svg viewBox="0 0 200 250" style="transform:translateZ(1px)">
+   <g class="shackle"><path d="M62 112 V72 a38 38 0 0 1 76 0 V112" fill="none" stroke="#000" stroke-width="26" stroke-linecap="round"/><path d="M62 112 V72 a38 38 0 0 1 76 0 V112" fill="none" stroke="#c9cfdc" stroke-width="15" stroke-linecap="round"/><path d="M70 80 a30 30 0 0 1 20 -30" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".8"/></g>
+   <path class="lbody" data-lbody d="${LOCK_BODY}" fill="#ec1f28" stroke="#000" stroke-width="7"/>
+   <path d="${LOCK_BODY}" fill="url(#dots)" opacity=".25"/>
+   <path d="M44 122 H120" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".5"/>
+   <circle cx="100" cy="160" r="16" fill="#000"/><path d="M93 166 L107 166 L103 200 L97 200Z" fill="#000"/>
+   <g data-lmark><text x="100" y="230" text-anchor="middle" font-family="Oswald,Impact,sans-serif" font-weight="700" font-size="20" fill="#fff" stroke="#000" stroke-width="1"></text></g>
+  </svg>`;
+  el.innerHTML=h;
+});
+
+/* ---------- laptop code text ---------- */
+const codeTxt=(()=>{let s='';const w=['ACCESS','root@','0x7F3A','ssh -p 22','GET /login','password:','******','sql> SELECT *','FROM users;','01011001','token=','#!bin/sh','> inject','decrypt()','port 443'];for(let i=0;i<80;i++){s+=w[(i*7)%w.length]+' '+Math.random().toString(16).slice(2,10)+'\n';}return s+s;})();
+$$('[data-codes]').forEach(el=>el.textContent=codeTxt);
+
+/* ---------- pipeline nodes ---------- */
+const pipeNodes=[[280,330,'doc'],[800,330,'phone'],[1320,330,'card'],[1320,640,'people'],[800,640,'lock'],[280,640,'shield']];
+(()=>{const g=$('[data-nodes]'); if(!g)return; g.innerHTML=pipeNodes.map(([x,y,ic],i)=>`<g class="node" transform="translate(${x} ${y})"><circle class="ring" r="58"/><circle class="n" r="56"/><g class="nico" transform="translate(-22 -22) scale(1.85)"><path d="${IC[ic]}" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="40" cy="-40" r="20" fill="#ffd60a" stroke="#000" stroke-width="4"/><text x="40" y="-32" text-anchor="middle" font-size="24" fill="#000">${i+1}</text></g>`).join('');})();
+
+/* ---------- scaling ---------- */
+function fit(){const s=Math.min(innerWidth/1600,innerHeight/900);document.documentElement.style.setProperty('--s',s);sizeCanvases();}
+
+/* ---------- navigation ---------- */
+const slides=$$('.slide'); const N=slides.length; let cur=0, busy=false, hintGone=false;
+setTimeout(()=>{hintGone=true;const h=$('[data-hint]');if(h)h.style.opacity=0;},5000);
+const dotsBox=$('[data-dots]');
+slides.forEach((s,i)=>{const b=document.createElement('button');b.title=(i+1)+'. '+(s.dataset.title||'');b.onclick=e=>{e.stopPropagation();go(i)};dotsBox.appendChild(b);});
+function updateUI(){
+  $('[data-counter]').textContent=String(cur+1).padStart(2,'0')+' / '+String(N).padStart(2,'0');
+  $$('button',dotsBox).forEach((b,i)=>b.classList.toggle('on',i===cur));
+  $('[data-progress]').style.width=((cur+1)/N*100)+'%';
+  $('[data-prev]').disabled=cur===0; $('[data-next]').disabled=cur===N-1;
+  $('[data-hint]').style.opacity=(cur===0&&!hintGone)?1:0;
+  try{history.replaceState(null,'','#'+(cur+1));}catch(e){}
+}
+function go(n){
+  if(busy||n===cur||n<0||n>=N) return;
+  const dir=n>cur?1:-1; busy=true;
+  const out=slides[cur], inn=slides[n];
+  out.classList.remove('active'); out.classList.add('leaving'); inn.classList.add('active');
+  const E='cubic-bezier(.75,0,.2,1)', D=1100;
+  out.animate([{transform:'translate3d(0,0,0) rotateY(0deg)',opacity:1},{transform:`translate3d(${-dir*60}%,0,-1000px) rotateY(${dir*75}deg)`,opacity:.0}],{duration:D,easing:E,fill:'forwards'});
+  const a=inn.animate([{transform:`translate3d(${dir*60}%,0,-1000px) rotateY(${-dir*75}deg)`,opacity:0},{transform:'translate3d(0,0,0) rotateY(0deg)',opacity:1}],{duration:D,easing:E});
+  slash(dir);
+  a.onfinish=()=>{out.classList.remove('leaving');out.getAnimations().forEach(x=>x.cancel());busy=false;};
+  cur=n; updateUI(); onEnter(n);
+}
+const next=()=>go(cur+1), prev=()=>go(cur-1);
+function slash(dir){
+  $$('#slash i').forEach((b,i)=>{
+    const from=dir>0?'-30vw':'130vw', to=dir>0?'140vw':'-40vw';
+    b.animate([{transform:`translateX(${from}) skewX(-18deg)`},{transform:`translateX(${to}) skewX(-18deg)`}],{duration:620,delay:120+i*55,easing:'cubic-bezier(.6,0,.3,1)',fill:'both'});
+  });
+  fx.shock(innerWidth/2,innerHeight/2);
+}
+$('[data-next]').onclick=e=>{e.stopPropagation();next()};
+$('[data-prev]').onclick=e=>{e.stopPropagation();prev()};
+$('[data-restart]').onclick=e=>{e.stopPropagation();go(0)};
+$('[data-fs]').onclick=e=>{e.stopPropagation();toggleFS()};
+function toggleFS(){try{if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}catch(e){}}
+document.addEventListener('click',e=>{
+  if(e.target.closest('button,a,[data-stop],.ui')) return;
+  fx.burst(e.clientX,e.clientY); next();
+});
+addEventListener('keydown',e=>{
+  if(['ArrowRight','PageDown',' ','Enter'].includes(e.key)){e.preventDefault();next();}
+  else if(['ArrowLeft','PageUp','Backspace'].includes(e.key)){e.preventDefault();prev();}
+  else if(e.key==='Home')go(0); else if(e.key==='End')go(N-1);
+  else if(e.key==='f'||e.key==='F'||e.key==='а'||e.key==='А')toggleFS();
+});
+let wheelLock=0;
+addEventListener('wheel',e=>{const t=Date.now(); if(t<wheelLock||Math.abs(e.deltaY)<25)return; wheelLock=t+1300; e.deltaY>0?next():prev();},{passive:true});
+let tx=null,ty=null;
+addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+addEventListener('touchend',e=>{if(tx===null)return;const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){dx<0?next():prev();}tx=null;},{passive:true});
+
+/* ---------- per-slide enter ---------- */
+function onEnter(n){
+  const s=slides[n];
+  $$('.anim',s).forEach((el,i)=>el.style.setProperty('--i',i));
+  $$('[data-count]',s).forEach(el=>countUp(el));
+  if($('[data-term]',s)) startTerm();
+}
+function countUp(el){
+  const to=parseFloat(el.dataset.count), dec=+(el.dataset.dec||0), pre=el.dataset.pre||'', suf=el.dataset.suf||'';
+  const t0=performance.now()+700, dur=1600;
+  const fmt=v=>pre+v.toFixed(dec).replace('.',',')+suf;
+  el.textContent=fmt(0); el.dataset.text=fmt(to);
+  (function step(t){const k=Math.min(1,Math.max(0,(t-t0)/dur)), e=1-Math.pow(1-k,3); const s=fmt(to*e); el.textContent=s; el.dataset.text=s; if(k<1) requestAnimationFrame(step);})(performance.now());
+}
+
+/* ---------- terminal typing ---------- */
+let termRun=0;
+function startTerm(){
+  const el=$('[data-term]'); const my=++termRun;
+  const lines=[['> nmap target-shop.ru',''],['  порт 22 ... открыт',''],['  порт 443 ... открыт',''],['> подбор пароля: admin',''],['  123456 ... ','ok','ПОДОШЁЛ!'],['> выгрузка базы клиентов…',''],['  [██████████] 100%',''],['! ВНИМАНИЕ: ВХОД ЗАФИКСИРОВАН','er'],['! IP записан в логи сервера','er'],['> ст. 272 УК РФ ждёт…','ok']];
+  let out='', li=0, ci=0;
+  function tick(){
+    if(my!==termRun) return;
+    if(li>=lines.length){setTimeout(()=>{if(my===termRun){out='';li=0;ci=0;tick();}},2600);return;}
+    const [txt,cls,extra]=lines[li];
+    const full=txt+(extra?extra:'');
+    if(ci<=full.length){
+      const shown=full.slice(0,ci);
+      el.innerHTML=out+`<span class="${cls||''}">${esc(shown)}</span><span class="cursor"></span>`;
+      ci++; setTimeout(tick, 22+Math.random()*40);
+    } else { out+=`<span class="${cls||''}">${esc(full)}</span>\n`; li++; ci=0; setTimeout(tick,260); }
+  }
+  tick();
+}
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+/* ---------- flip cards ---------- */
+$$('.flip').forEach(f=>f.addEventListener('click',()=>{f.classList.toggle('on');fx.sparkle(f);}));
+
+/* ---------- tilt ---------- */
+$$('[data-tilt]').forEach(el=>{
+  el.addEventListener('mousemove',e=>{const r=el.getBoundingClientRect();const x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
+    el.style.transform=`rotateY(${x*16}deg) rotateX(${-y*16}deg) translateZ(24px)`;el.style.setProperty('--gx',(x+.5)*100+'%');el.style.setProperty('--gy',(y+.5)*100+'%');});
+  el.addEventListener('mouseleave',()=>{el.style.transform='';});
+});
+
+/* ---------- checklist & lock ---------- */
+(()=>{
+  const items=$$('[data-check] li'), wrap=$('[data-lock]'), st=$('[data-lock-st]'), bar=$('[data-lock-bar]'), body=$('[data-lbody]'), mark=$('[data-lmark] text');
+  function upd(){
+    const d=items.filter(i=>i.classList.contains('done')).length, all=d===items.length;
+    bar.style.width=(d/items.length*100)+'%';
+    const txt=all?'ЗАЩИЩЕНО!':`ЗАМОК ОТКРЫТ: ${d} / ${items.length}`;
+    st.textContent=txt; st.dataset.text=txt; st.style.color=all?'#7dff8a':'';
+    wrap.classList.toggle('lock-open',!all);
+    body.setAttribute('fill',all?'#ffd60a':(d>3?'#ff8a00':'#ec1f28'));
+    mark.textContent=all?'ЗАЩИЩЕНО':'';
+    return all;
+  }
+  items.forEach(li=>li.addEventListener('click',e=>{li.classList.toggle('done');const r=li.getBoundingClientRect();fx.burst(r.left+40,r.top+r.height/2,li.classList.contains('done')?'#ffd60a':'#888');
+    if(upd()&&li.classList.contains('done')){const lr=wrap.getBoundingClientRect();setTimeout(()=>{fx.burst(lr.left+lr.width/2,lr.top+lr.height/2,'#ffd60a',80);fx.shock(lr.left+lr.width/2,lr.top+lr.height/2);},350);}
+  }));
+  upd();
+})();
+
+/* ---------- quiz ---------- */
+(()=>{
+  const cards=$$('[data-quiz] .qcard'), sc=$('[data-score]');
+  const upd=()=>{const ok=cards.filter(c=>c.dataset.res==='good').length;sc.textContent=ok+' / '+cards.length;};
+  cards.forEach(c=>{
+    $$('[data-ans]',c).forEach(b=>b.addEventListener('click',()=>{
+      const good=b.dataset.ans===c.dataset.correct; const res=$('.qres',c);
+      res.classList.toggle('good',good);res.classList.toggle('bad',!good);
+      $('[data-v]',res).textContent=good?'ВЕРНО!':'ОШИБКА!';
+      c.dataset.res=good?'good':'bad'; c.classList.add('answered');
+      const r=b.getBoundingClientRect(); fx.burst(r.left+r.width/2,r.top+r.height/2,good?'#22c55e':'#ec1f28',good?60:24);
+      upd();
+    }));
+    $('[data-reset]',c).addEventListener('click',()=>{c.classList.remove('answered');delete c.dataset.res;upd();});
+  });
+})();
+
+/* ---------- canvases ---------- */
+const DPR=Math.min(2,devicePixelRatio||1);
+const rains=$$('canvas[data-rain]').map(c=>({c,ctx:c.getContext('2d'),type:c.dataset.rain,drops:[]}));
+function sizeCanvases(){
+  rains.forEach(r=>{r.c.width=r.c.clientWidth*DPR||innerWidth*DPR;r.c.height=r.c.clientHeight*DPR||innerHeight*DPR;const cols=Math.ceil(r.c.width/(16*DPR));r.drops=Array.from({length:cols},()=>Math.random()*-50);});
+  fx.resize();
+}
+const GLYPHS='01アイウエオカキクケコ<>{}[]#$%&@АБВГДЕЖЗИКЛ01010110';
+function drawRain(r,dt){
+  const {c,ctx}=r, fs=16*DPR;
+  ctx.fillStyle=r.type==='hero'?'rgba(4,10,40,.16)':'rgba(4,10,40,.12)'; ctx.fillRect(0,0,c.width,c.height);
+  ctx.font=`700 ${fs}px JetBrains Mono, monospace`;
+  for(let i=0;i<r.drops.length;i++){
+    if(r.type==='hero' && i*fs < c.width*0.42) continue;
+    const y=r.drops[i]*fs, ch=GLYPHS[(Math.random()*GLYPHS.length)|0];
+    ctx.fillStyle= Math.random()<.04?'#ffffff':(r.type==='hero'?'rgba(110,170,255,.55)':'rgba(110,200,255,.8)');
+    ctx.fillText(ch,i*fs,y);
+    if(y>c.height && Math.random()>.975) r.drops[i]=0;
+    r.drops[i]+= (r.type==='hero'?.35:.55)*dt;
+  }
+}
+
+/* globe */
+const globe=(()=>{
+  const c=$('[data-globe]'); if(!c) return null; const ctx=c.getContext('2d'); c.width=700*DPR;c.height=700*DPR;
+  const pts=[], NPT=900, ga=Math.PI*(3-Math.sqrt(5));
+  for(let i=0;i<NPT;i++){const y=1-(i/(NPT-1))*2, r=Math.sqrt(1-y*y), th=ga*i; pts.push([Math.cos(th)*r,y,Math.sin(th)*r]);}
+  const ll=(la,lo)=>{la*=Math.PI/180;lo*=Math.PI/180;return [Math.cos(la)*Math.sin(lo),-Math.sin(la),Math.cos(la)*Math.cos(lo)];};
+  const nodes=[ll(52,5),ll(40,-74),ll(-23,-46),ll(1.3,104),ll(35,139),ll(56,60)];
+  let ang=0, prog=0;
+  function slerp(a,b,t){const d=Math.max(-1,Math.min(1,a[0]*b[0]+a[1]*b[1]+a[2]*b[2]));const w=Math.acos(d),s=Math.sin(w);if(s<1e-4)return a;const k1=Math.sin((1-t)*w)/s,k2=Math.sin(t*w)/s,l=1+.22*Math.sin(Math.PI*t);return [(a[0]*k1+b[0]*k2)*l,(a[1]*k1+b[1]*k2)*l,(a[2]*k1+b[2]*k2)*l];}
+  function draw(dt,time){
+    const W=c.width,H=c.height,cx=W/2,cy=H/2,R=W*.38, tilt=.35;
+    ang+=.0035*dt; prog+=.0045*dt; if(prog>nodes.length+2.2) prog=0;
+    const ca=Math.cos(ang),sa=Math.sin(ang),ct=Math.cos(tilt),st=Math.sin(tilt);
+    const P=p=>{const x1=p[0]*ca+p[2]*sa, z1=-p[0]*sa+p[2]*ca; const y2=p[1]*ct-z1*st, z2=p[1]*st+z1*ct; return [cx+x1*R, cy+y2*R, z2];};
+    ctx.clearRect(0,0,W,H);
+    // halo
+    let g=ctx.createRadialGradient(cx,cy,R*.6,cx,cy,R*1.35);g.addColorStop(0,'rgba(43,99,255,.35)');g.addColorStop(1,'rgba(43,99,255,0)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // sphere body
+    g=ctx.createRadialGradient(cx-R*.35,cy-R*.35,R*.1,cx,cy,R);g.addColorStop(0,'#2a5bff');g.addColorStop(.6,'#0b1e6e');g.addColorStop(1,'#030924');
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();ctx.lineWidth=8*DPR;ctx.strokeStyle='#000';ctx.stroke();
+    // orbit ring
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(-.35);ctx.beginPath();ctx.ellipse(0,0,R*1.25,R*.32,0,0,Math.PI*2);ctx.strokeStyle='rgba(255,214,10,.55)';ctx.lineWidth=3*DPR;ctx.setLineDash([10*DPR,12*DPR]);ctx.lineDashOffset=-time*.03;ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    // points
+    for(const p of pts){const [x,y,z]=P(p); if(z<0){ctx.fillStyle='rgba(120,170,255,.12)';ctx.fillRect(x,y,1.6*DPR,1.6*DPR);} else {const s=(1+z*1.6)*DPR; ctx.fillStyle=`rgba(150,200,255,${.35+z*.6})`; ctx.beginPath();ctx.arc(x,y,s,0,7);ctx.fill();}}
+    // arcs
+    ctx.lineCap='round';
+    for(let i=0;i<nodes.length-1;i++){
+      const seg=Math.max(0,Math.min(1,prog-i)); if(seg<=0) break;
+      ctx.beginPath(); let first=true;
+      for(let k=0;k<=40*seg;k++){const t=k/40; const q=P(slerp(nodes[i],nodes[i+1],t)); if(first){ctx.moveTo(q[0],q[1]);first=false;} else ctx.lineTo(q[0],q[1]);}
+      ctx.strokeStyle='#000';ctx.lineWidth=7*DPR;ctx.stroke();ctx.strokeStyle='#ffd60a';ctx.lineWidth=3.5*DPR;ctx.stroke();
+      if(seg<1){const q=P(slerp(nodes[i],nodes[i+1],seg));ctx.beginPath();ctx.arc(q[0],q[1],9*DPR,0,7);ctx.fillStyle='#fff';ctx.fill();ctx.lineWidth=3*DPR;ctx.strokeStyle='#000';ctx.stroke();}
+    }
+    // nodes
+    nodes.forEach((n,i)=>{const [x,y,z]=P(n); const last=i===nodes.length-1; const reached=prog>=i;
+      ctx.globalAlpha=z<-.15?.35:1;
+      ctx.beginPath();ctx.arc(x,y,(last?11:8)*DPR,0,7);ctx.fillStyle=last?(reached?'#ec1f28':'#555'):(reached?'#ffd60a':'#445');ctx.fill();ctx.lineWidth=3*DPR;ctx.strokeStyle='#000';ctx.stroke();
+      if(!last&&reached){ctx.font=`700 ${13*DPR}px Oswald, sans-serif`;ctx.fillStyle='#fff';ctx.strokeStyle='#000';ctx.lineWidth=4*DPR;ctx.strokeText('VPN '+(i+1),x+12*DPR,y-10*DPR);ctx.fillText('VPN '+(i+1),x+12*DPR,y-10*DPR);}
+      if(last && prog>=nodes.length-1){
+        const pulse=(time*.004)%1; ctx.save();ctx.translate(x,y);ctx.rotate(time*.002);
+        ctx.strokeStyle='#ec1f28';ctx.lineWidth=4*DPR;ctx.beginPath();ctx.arc(0,0,(26+pulse*18)*DPR,0,7);ctx.globalAlpha=(1-pulse)*(z<-.15?.35:1);ctx.stroke();ctx.globalAlpha=z<-.15?.35:1;
+        ctx.lineWidth=4*DPR;ctx.beginPath();ctx.arc(0,0,22*DPR,0,7);ctx.stroke();
+        for(let k=0;k<4;k++){ctx.rotate(Math.PI/2);ctx.beginPath();ctx.moveTo(14*DPR,0);ctx.lineTo(34*DPR,0);ctx.stroke();}
+        ctx.restore();
+        const lx=Math.min(W-200*DPR,x+30*DPR), ly=y+44*DPR;
+        ctx.font=`700 ${22*DPR}px Oswald, sans-serif`;const tw=ctx.measureText('ЦЕЛЬ НАЙДЕНА').width;
+        ctx.fillStyle='#000';ctx.fillRect(lx-8*DPR,ly-26*DPR,tw+16*DPR,34*DPR);ctx.fillStyle='#ffd60a';ctx.fillText('ЦЕЛЬ НАЙДЕНА',lx,ly);
+      }
+      ctx.globalAlpha=1;
+    });
+    // halftone shade
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,R-4*DPR,0,Math.PI*2);ctx.clip();
+    g=ctx.createLinearGradient(cx-R,cy-R,cx+R,cy+R);g.addColorStop(.5,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.45)');ctx.fillStyle=g;ctx.fillRect(cx-R,cy-R,R*2,R*2);ctx.restore();
+  }
+  return {draw};
+})();
+
+/* pipeline runner */
+const pipe=(()=>{
+  const path=$('#pipePath'); if(!path) return null; const L=path.getTotalLength(); const runner=$('.runner'); const nodes=$$('.node');
+  const nodeAt=pipeNodes.map(([x,y])=>{let best=0,bd=1e9;for(let s=0;s<=L;s+=4){const p=path.getPointAtLength(s);const d=(p.x-x)**2+(p.y-y)**2;if(d<bd){bd=d;best=s;}}return best;});
+  let t=0;
+  return {draw(dt){ t+=dt*0.0028; const cyc=t%1.25, k=Math.min(1,cyc); const e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2; const s=e*L; const p=path.getPointAtLength(s); runner.setAttribute('transform',`translate(${p.x} ${p.y})`);
+    nodes.forEach((n,i)=>{const on=s>=nodeAt[i]-2; if(on&&!n.classList.contains('lit')){n.classList.add('lit');} else if(!on&&n.classList.contains('lit')) n.classList.remove('lit');}); }};
+})();
+
+/* ---------- FX particles ---------- */
+const fx=(()=>{
+  const c=$('#fx'), ctx=c.getContext('2d'); let W=0,H=0; const ps=[], rings=[];
+  const COLS=['#ffd60a','#ff4b4b','#5b8cff','#ffffff'];
+  function resize(){W=c.width=innerWidth*DPR;H=c.height=innerHeight*DPR;}
+  function amb(){return {x:Math.random()*W,y:H+Math.random()*H*.5,vx:(Math.random()-.5)*.3,vy:-(.3+Math.random()*.9),r:(1+Math.random()*2.4)*DPR,col:COLS[(Math.random()*4)|0],life:1e9,amb:true,ph:Math.random()*6};}
+  function init(){resize();for(let i=0;i<70;i++){const p=amb();p.y=Math.random()*H;ps.push(p);}}
+  function burst(x,y,col,n=28){x*=DPR;y*=DPR;for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,sp=(2+Math.random()*7)*DPR;ps.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:(2+Math.random()*3)*DPR,col:col||COLS[(Math.random()*4)|0],life:1,dec:.015+Math.random()*.02,g:.12*DPR});}
+    rings.push({x,y,r:6*DPR,life:1,col:col||'#ffd60a',star:true});}
+  function shock(x,y){rings.push({x:x*DPR,y:y*DPR,r:10*DPR,life:1,col:'#ffd60a',big:true});}
+  function sparkle(el){const r=el.getBoundingClientRect();for(let i=0;i<14;i++){burst(r.left+Math.random()*r.width,r.top+Math.random()*r.height,null,2);}}
+  function draw(dt){
+    ctx.clearRect(0,0,W,H);
+    for(let i=ps.length-1;i>=0;i--){const p=ps[i];
+      if(p.amb){p.ph+=.02*dt;p.x+=(p.vx+Math.sin(p.ph)*.3)*dt;p.y+=p.vy*dt*DPR; if(p.y<-20){Object.assign(p,amb());}}
+      else{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=p.g*dt;p.vx*=.98;p.life-=p.dec*dt;if(p.life<=0){ps.splice(i,1);continue;}}
+      ctx.globalAlpha=p.amb?.55:Math.max(0,p.life);ctx.fillStyle=p.col;ctx.beginPath();
+      if(p.amb){ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();ctx.globalAlpha=.12;ctx.arc(p.x,p.y,p.r*4,0,7);ctx.fill();}
+      else{ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.life*6);ctx.fillRect(-p.r,-p.r,p.r*2,p.r*2);ctx.restore();}
+    }
+    for(let i=rings.length-1;i>=0;i--){const r=rings[i]; r.life-=(r.big?.03:.05)*dt; r.r+=(r.big?28:6)*DPR*dt; if(r.life<=0){rings.splice(i,1);continue;}
+      ctx.globalAlpha=r.life; ctx.strokeStyle=r.col; ctx.lineWidth=(r.big?10:4)*DPR*r.life;
+      if(r.star){ctx.beginPath();for(let k=0;k<12;k++){const a=k/12*Math.PI*2;ctx.moveTo(r.x+Math.cos(a)*r.r*.6,r.y+Math.sin(a)*r.r*.6);ctx.lineTo(r.x+Math.cos(a)*r.r,r.y+Math.sin(a)*r.r);}ctx.stroke();}
+      else{ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,7);ctx.stroke();}
+    }
+    ctx.globalAlpha=1;
+  }
+  return {init,resize,burst,shock,sparkle,draw};
+})();
+
+/* ---------- parallax ---------- */
+let mx=0,my=0,px=0,py=0;
+addEventListener('mousemove',e=>{mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5;});
+
+/* ---------- main loop ---------- */
+let last=performance.now();
+function loop(t){
+  const dt=Math.min(3,(t-last)/16.67); last=t;
+  px+=(mx-px)*.06*dt; py+=(my-py)*.06*dt;
+  const act=slides[cur];
+  $$('[data-depth]',act).forEach(el=>{const d=+el.dataset.depth;el.style.transform=`translate3d(${-px*d*50}px,${-py*d*36}px,0)`;});
+  rains.forEach(r=>{const s=r.c.closest('.slide'); if(s.classList.contains('active')||s.classList.contains('leaving')) drawRain(r,dt);});
+  if(globe){const s=$('[data-globe]').closest('.slide'); if(s.classList.contains('active')||s.classList.contains('leaving')) globe.draw(dt,t);}
+  if(pipe){const s=$('#pipePath').closest('.slide'); if(s.classList.contains('active')) pipe.draw(dt);}
+  fx.draw(dt);
+  requestAnimationFrame(loop);
+}
+
+/* ---------- PDF mode ---------- */
+if(/[?&]pdf/.test(location.search)){
+  document.documentElement.classList.add('pdf');
+  rains.forEach(r=>{r.c.width=1600;r.c.height=900;const cols=Math.ceil(1600/16);r.drops=Array.from({length:cols},()=>Math.random()*60);for(let i=0;i<120;i++)drawRain(r,1);});
+  if(globe) globe.draw(1500,0);
+  $$('.node').forEach(n=>n.classList.add('lit'));
+  const rn=$('.runner'); if(rn) rn.setAttribute('transform','translate(280 640)');
+  $$('[data-count]').forEach(el=>{const to=parseFloat(el.dataset.count),dec=+(el.dataset.dec||0);const s=(el.dataset.pre||'')+to.toFixed(dec).replace('.',',')+(el.dataset.suf||'');el.textContent=s;el.dataset.text=s;});
+  return;
+}
+/* ---------- start ---------- */
+fx.init(); addEventListener('resize',fit); fit();
+const h=parseInt(location.hash.slice(1)); if(h>=1&&h<=N) cur=h-1;
+slides[cur].classList.add('active'); updateUI(); onEnter(cur);
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
